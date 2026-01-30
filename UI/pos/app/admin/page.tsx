@@ -75,7 +75,7 @@ function DashboardSection() {
           </table>
         </div>
 
-        {/* --- QUICK TIPS / ALERTS --- */}
+        {/* --- QUICK TIPS / ALERTS ---
         <div style={{ background: "#f0fdf4", padding: 24, borderRadius: 16, border: "1px dashed #bbf7d0" }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: "#166534" }}>Performance Insights</h3>
           <p style={{ fontSize: 14, color: "#166534", lineHeight: 1.5 }}>
@@ -83,7 +83,7 @@ function DashboardSection() {
             <br/><br/>
             💡 <b>Tip:</b> Your highest traffic is between 4 PM and 7 PM. Ensure stock is replenished by noon.
           </p>
-        </div>
+        </div> */}
       </div>
     </section>
   );
