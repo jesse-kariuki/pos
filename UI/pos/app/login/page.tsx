@@ -225,7 +225,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div style={{ marginTop: 24, textAlign: 'center' }}>
+          {/* <div style={{ marginTop: 24, textAlign: 'center' }}>
             <Link 
               href="/forgot-password" 
               style={{ 
@@ -237,9 +237,9 @@ export default function LoginPage() {
             >
               Forgot Password?
             </Link>
-          </div>
+          </div> */}
 
-          <div style={{ marginTop: 32, textAlign: 'center' }}>
+          {/* <div style={{ marginTop: 32, textAlign: 'center' }}>
             <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 16 }}>
               Don't have an account?{' '}
               <Link 
@@ -253,7 +253,7 @@ export default function LoginPage() {
                 Sign Up
               </Link>
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
