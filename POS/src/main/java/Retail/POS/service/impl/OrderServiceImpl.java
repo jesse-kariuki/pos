@@ -156,7 +156,7 @@ public class OrderServiceImpl implements OrderService {
                         Collectors.collectingAndThen(
                                 Collectors.toList(),
                                 list -> {
-                                    long totalQty = list.stream().mapToLong(OrderItem::getQuantity).sum();
+                                    double totalQty = list.stream().mapToDouble(OrderItem::getQuantity).sum();
                                     double totalRev = list.stream().mapToDouble(item -> item.getPrice() * item.getQuantity()).sum();
                                     return new TopProductDto("", totalQty, totalRev);
                                 }

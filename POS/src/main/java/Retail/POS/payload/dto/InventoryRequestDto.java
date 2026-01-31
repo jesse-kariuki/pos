@@ -1,5 +1,6 @@
 package Retail.POS.payload.dto;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -17,6 +18,6 @@ public class InventoryRequestDto {
     private Long productId;
 
     @NotNull
-    @Min(0)
-    private int quantity;
+    @DecimalMin(value = "0.0", inclusive = true)
+    private Double quantity;
 }

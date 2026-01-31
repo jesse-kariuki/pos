@@ -12,7 +12,6 @@ public class OrderItemRequestDto {
     @NotNull
     private Long productId;
 
-    @Min(1)
-    private Integer quantity;
+    private Double quantity;
 
 }

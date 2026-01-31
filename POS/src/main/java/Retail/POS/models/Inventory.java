@@ -1,6 +1,7 @@
 package Retail.POS.models;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMin;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,7 +25,8 @@ public class Inventory {
     private Product product;
 
     @Column(nullable = false)
-    private Integer quantity;
+    @DecimalMin(value = "0.0", inclusive = true)
+    private Double quantity;
 
     private LocalDateTime lastUpdated;
 

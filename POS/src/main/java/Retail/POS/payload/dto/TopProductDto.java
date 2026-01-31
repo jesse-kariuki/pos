@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class TopProductDto {
     private String name;
-    private Long quantitySold;
+    private Double quantitySold;
     private Double revenue;
 }
