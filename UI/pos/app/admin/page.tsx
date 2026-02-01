@@ -77,9 +77,9 @@ function DashboardSection() {
   }
 
   return (
-    <section className="space-y-8 h-full">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <section className="h-full flex flex-col">
+      {/* Header - Fixed */}
+      <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Dashboard Overview</h2>
           <p className="text-gray-600 mt-2">Welcome back! Here's what's happening with your store today.</p>
@@ -89,93 +89,96 @@ function DashboardSection() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          title="Today's Sales" 
-          value={`Ksh ${stats.todaySales.toLocaleString()}`} 
-          icon={<FaDollarSign className="text-emerald-600" />}
-          trend="up"
-          color="emerald"
-        />
-        <StatCard 
-          title="Monthly Sales" 
-          value={`Ksh ${stats.monthSales.toLocaleString()}`} 
-          icon={<FaChartBar className="text-blue-600" />}
-          trend="up"
-          color="blue"
-        />
-        <StatCard 
-          title="Total Transactions" 
-          value={stats.orderCount.toString()} 
-          icon={<FaShoppingCart className="text-purple-600" />}
-          trend="up"
-          color="purple"
-        />
-        <StatCard 
-          title="Avg. Order Value" 
-          value={`Ksh ${stats.avgOrderValue.toFixed(0)}`} 
-          icon={<FaChartLine className="text-amber-600" />}
-          trend="down"
-          color="amber"
-        />
-      </div>
-
-      {/* Charts and Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Products */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Top Selling Products</h3>
-              <span className="text-sm text-emerald-600 font-medium">This Month</span>
-            </div>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {stats.topProducts.slice(0, 5).map((product, index) => (
-              <div key={index} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center space-x-4">
-                  <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 font-bold">
-                    {index + 1}
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">{product.name}</h4>
-                    <p className="text-sm text-gray-500">{product.quantitySold} units sold</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-gray-900">Ksh {product.revenue.toLocaleString()}</p>
-                  <p className="text-xs text-emerald-600 font-medium">Revenue</p>
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto space-y-8 pb-6">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard 
+            title="Today's Sales" 
+            value={`Ksh ${stats.todaySales.toLocaleString()}`} 
+            icon={<FaDollarSign className="text-emerald-600" />}
+            trend="up"
+            color="emerald"
+          />
+          <StatCard 
+            title="Monthly Sales" 
+            value={`Ksh ${stats.monthSales.toLocaleString()}`} 
+            icon={<FaChartBar className="text-blue-600" />}
+            trend="up"
+            color="blue"
+          />
+          <StatCard 
+            title="Total Transactions" 
+            value={stats.orderCount.toString()} 
+            icon={<FaShoppingCart className="text-purple-600" />}
+            trend="up"
+            color="purple"
+          />
+          <StatCard 
+            title="Avg. Order Value" 
+            value={`Ksh ${stats.avgOrderValue.toFixed(0)}`} 
+            icon={<FaChartLine className="text-amber-600" />}
+            trend="down"
+            color="amber"
+          />
         </div>
 
-        {/* Recent Orders */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
-              <span className="text-sm text-blue-600 font-medium">Last 5 Orders</span>
+        {/* Charts and Tables - Make sure this is scrollable if needed */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Top Products */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Top Selling Products</h3>
+                <span className="text-sm text-emerald-600 font-medium">This Month</span>
+              </div>
+            </div>
+            <div className="divide-y divide-gray-100 flex-1 overflow-y-auto">
+              {stats.topProducts.slice(0, 5).map((product, index) => (
+                <div key={index} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 font-bold">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">{product.name}</h4>
+                      <p className="text-sm text-gray-500">{product.quantitySold} units sold</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">Ksh {product.revenue.toLocaleString()}</p>
+                    <p className="text-xs text-emerald-600 font-medium">Revenue</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="divide-y divide-gray-100">
-            {stats.recentOrders.map((order) => (
-              <div key={order.id} className="p-4 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-3 h-3 rounded-full ${order.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-                    <span className="font-medium text-gray-900">#{order.id}</span>
-                  </div>
-                  <span className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">{order.paymentMethod}</span>
-                  <span className="font-semibold text-gray-900">Ksh {order.totalAmount?.toFixed(2)}</span>
-                </div>
+
+          {/* Recent Orders */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
+                <span className="text-sm text-blue-600 font-medium">Last 5 Orders</span>
               </div>
-            ))}
+            </div>
+            <div className="divide-y divide-gray-100 flex-1 overflow-y-auto">
+              {stats.recentOrders.map((order) => (
+                <div key={order.id} className="p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-3 h-3 rounded-full ${order.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                      <span className="font-medium text-gray-900">#{order.id}</span>
+                    </div>
+                    <span className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">{order.paymentMethod}</span>
+                    <span className="font-semibold text-gray-900">Ksh {order.totalAmount?.toFixed(2)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -263,8 +266,9 @@ function OrdersSection() {
   }
 
   return (
-    <section className="space-y-6 h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <section className="h-full flex flex-col">
+      {/* Header - Fixed */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Transaction History</h2>
           <p className="text-gray-600 mt-2">View and manage all customer transactions</p>
@@ -292,10 +296,11 @@ function OrdersSection() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden flex-1 min-h-0">
-        <div className="overflow-x-auto">
+      {/* Scrollable Table Container */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden flex-1 flex flex-col">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Order ID</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Date & Time</th>
@@ -342,10 +347,12 @@ function OrdersSection() {
         </div>
         
         {filteredOrders.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-4xl mb-4">📄</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
-            <p className="text-gray-600">Try adjusting your search or filter criteria</p>
+          <div className="text-center py-12 flex-1 flex items-center justify-center">
+            <div>
+              <div className="text-gray-400 text-4xl mb-4">📄</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
+              <p className="text-gray-600">Try adjusting your search or filter criteria</p>
+            </div>
           </div>
         )}
       </div>
@@ -448,8 +455,8 @@ function InventorySection() {
   }
 
   return (
-    <section className="space-y-6 h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <section className="h-full flex flex-col">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Inventory Management</h2>
           <p className="text-gray-600 mt-2">Track and manage your product stock levels</p>
@@ -464,8 +471,8 @@ function InventorySection() {
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 flex-1 min-h-0 flex flex-col">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
             <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
@@ -491,10 +498,12 @@ function InventorySection() {
             <span className="ml-2">products found</span>
           </div>
         </div>
+      </div>
 
-        {/* Inventory Grid */}
+      {/* Scrollable Inventory Grid */}
+      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 flex-1 overflow-y-auto">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 flex-1 flex items-center justify-center">
+          <div className="text-center py-12 h-full flex items-center justify-center">
             <div>
               <div className="text-gray-400 text-4xl mb-4">📦</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
@@ -502,9 +511,9 @@ function InventorySection() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto flex-1 pb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map(item => (
-              <div key={item.id} className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-fit">
+              <div key={item.id} className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <div className="flex items-center space-x-2 mb-2">
@@ -683,7 +692,7 @@ export default function AdminPage() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-4 lg:p-8 overflow-hidden flex flex-col">
+        <main className="flex-1 p-4 lg:p-6 overflow-hidden flex flex-col">
           <div className={`flex-1 overflow-hidden transition-opacity duration-200 ${
             isTransitioning ? 'opacity-50' : 'opacity-100'
           }`}>
