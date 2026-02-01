@@ -175,71 +175,116 @@ export default function CashierDashboard() {
     setCart((prev) => prev.filter(item => item.id !== id));
   }
 
-  const printReceipt = () => {
-    const printWindow = window.open('', '_blank');
-    
-    if (!printWindow) {
-      setError("Pop-up blocked! Please allow pop-ups to print receipts.");
-      return;
-    }
+const printReceipt = () => {
+  const printWindow = window.open('', '_blank');
   
-    const receiptDate = new Date().toLocaleString();
+  if (!printWindow) {
+    setError("Pop-up blocked! Please allow pop-ups to print receipts.");
+    return;
+  }
+
+  const receiptDate = new Date();
+  const amountReceived = paymentMethod === 'cash' ? Number(cashGiven) || total : total;
+  const changeAmount = Math.max(0, amountReceived - total);
   
-    const itemRows = cart.map(item => `
-      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-        <span style="flex: 2;">${item.name.substring(0, 18)}${item.name.length > 18 ? '..' : ''}</span>
-        <span style="flex: 1; text-align: right;">${item.qty}${item.type === 'WEIGHED' ? 'kg' : ''}</span>
-        <span style="flex: 1; text-align: right;">${(item.sellingPrice * item.qty).toFixed(2)}</span>
-      </div>
-    `).join('');
-  
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Receipt</title>
-          <style>
-            @page { size: 80mm auto; margin: 0; }
-            body { 
-              font-family: 'Courier New', Courier, monospace; 
-              width: 72mm;
-              padding: 4mm; 
-              font-size: 12px; 
-              color: #000;
-            }
-            .divider { border-top: 1px dashed #000; margin: 5px 0; }
-            .center { text-align: center; }
-            .bold { font-weight: bold; }
-          </style>
-        </head>
-        <body>
-          <div class="center bold" style="font-size: 16px;">ESIT GROCERIES</div>
-          <div class="center">Nairobi, Kenya</div>
-          <div class="center">${receiptDate}</div>
-          <div class="divider"></div>
-          <div style="display: flex; justify-content: space-between;" class="bold">
-            <span style="flex: 2;">ITEM</span>
-            <span style="flex: 1; text-align: right;">QTY</span>
-            <span style="flex: 1; text-align: right;">TOTAL</span>
+  const itemRows = cart.map(item => `
+    <tr>
+      <td style="font-size: 10px;">${item.name.substring(0, 20)}${item.name.length > 20 ? '..' : ''}</td>
+      <td style="font-size: 10px; text-align: center;">${item.qty}${item.type === 'WEIGHED' ? 'kg' : ''}</td>
+      <td style="font-size: 10px; text-align: right;">${(item.sellingPrice * item.qty).toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Receipt</title>
+        <style>
+          @page { size: 80mm auto; margin: 0; }
+          body { 
+            font-family: 'Courier New', Courier, monospace; 
+            width: 72mm;
+            padding: 4mm; 
+            font-size: 10px; 
+            color: #000;
+            line-height: 1.2;
+          }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+          .divider { border-top: 1px dashed #000; margin: 5px 0; }
+          table { width: 100%; border-collapse: collapse; }
+          th { padding: 3px 0; border-bottom: 1px solid #000; }
+          td { padding: 2px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="center bold" style="font-size: 14px;">ESIT GROCERIES</div>
+        <div class="center" style="font-size: 9px; font-style: italic;">Fresh from the Farm</div>
+        <div class="center" style="font-size: 8px;">Nairobi, Kenya</div>
+        <div class="center" style="font-size: 8px;">${receiptDate.toLocaleString()}</div>
+        <div class="center" style="font-size: 8px; margin-bottom: 5px;">Receipt #: ${Date.now().toString().slice(-6)}</div>
+        
+        <div class="divider"></div>
+        
+        <table>
+          <thead>
+            <tr class="bold">
+              <th style="text-align: left; width: 50%;">ITEM</th>
+              <th style="text-align: center; width: 25%;">QTY</th>
+              <th style="text-align: right; width: 25%;">TOTAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemRows}
+          </tbody>
+        </table>
+        
+        <div class="divider"></div>
+        
+        <div style="display: flex; justify-content: space-between; font-size: 10px;">
+          <span class="bold">Subtotal:</span>
+          <span>Ksh ${total.toFixed(2)}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 3px;">
+          <span class="bold">Amount Paid:</span>
+          <span>Ksh ${amountReceived.toFixed(2)}</span>
+        </div>
+        
+        ${changeAmount > 0 ? `
+          <div style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 3px; color: #d00;">
+            <span class="bold">Change:</span>
+            <span>Ksh ${changeAmount.toFixed(2)}</span>
           </div>
-          <div class="divider"></div>
-          ${itemRows}
-          <div class="divider"></div>
-          <div style="display: flex; justify-content: space-between;" class="bold">
-            <span>GRAND TOTAL</span>
-            <span>Ksh ${total.toFixed(2)}</span>
-          </div>
-          <div class="divider"></div>
-          <div class="center">THANK YOU FOR YOUR PATRONAGE</div>
-        </body>
-      </html>
-    `);
-  
-    printWindow.document.close();
-    
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
-  };
+        ` : ''}
+        
+        <div class="divider"></div>
+        
+        <div style="display: flex; justify-content: space-between; font-size: 12px;" class="bold">
+          <span>GRAND TOTAL</span>
+          <span>Ksh ${total.toFixed(2)}</span>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <div class="center" style="font-size: 9px; margin-top: 10px;">
+          <div>Payment: ${paymentMethod.toUpperCase()}</div>
+          ${paymentMethod === 'mpesa' && phone ? `<div>Phone: ${phone}</div>` : ''}
+          <div style="margin-top: 5px;">THANK YOU FOR YOUR PATRONAGE</div>
+          <div style="font-size: 8px; margin-top: 5px;">Items: ${cart.length} | Cashier: ${localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').name?.split(' ')[0] || 'Cashier' : 'Cashier'}</div>
+        </div>
+        
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+};
 
   const completePayment = async () => {
     if (cart.length === 0) {
@@ -329,7 +374,6 @@ export default function CashierDashboard() {
             <div className="flex-1 max-w-xl mx-8">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaSearch className="h-5 w-5 text-emerald-300" />
                 </div>
                 <input
                   ref={barcodeInputRef}
@@ -374,7 +418,6 @@ export default function CashierDashboard() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-emerald-900/50 rounded-lg">
-                        <FaSearch className="h-5 w-5 text-emerald-400" />
                       </div>
                       <div>
                         <h3 className="font-bold text-white">Search Results</h3>
@@ -586,7 +629,6 @@ export default function CashierDashboard() {
                       onClick={() => handleScan(barcode)}
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-emerald-700 hover:bg-emerald-600 rounded-lg transition-colors"
                     >
-                      <FaSearch className="h-4 w-4 text-white" />
                     </button>
                   </div>
                 </div>

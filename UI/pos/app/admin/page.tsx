@@ -100,7 +100,6 @@ function DashboardSection() {
           value={`Ksh ${stats.todaySales.toLocaleString()}`} 
           icon={<FaDollarSign className="text-emerald-600" />}
           trend="up"
-          trendValue="12.5%"
           color="emerald"
         />
         <StatCard 
@@ -108,7 +107,6 @@ function DashboardSection() {
           value={`Ksh ${stats.monthSales.toLocaleString()}`} 
           icon={<FaChartBar className="text-blue-600" />}
           trend="up"
-          trendValue="8.2%"
           color="blue"
         />
         <StatCard 
@@ -116,7 +114,6 @@ function DashboardSection() {
           value={stats.orderCount.toString()} 
           icon={<FaShoppingCart className="text-purple-600" />}
           trend="up"
-          trendValue="5.3%"
           color="purple"
         />
         <StatCard 
@@ -124,7 +121,6 @@ function DashboardSection() {
           value={`Ksh ${stats.avgOrderValue.toFixed(0)}`} 
           icon={<FaChartLine className="text-amber-600" />}
           trend="down"
-          trendValue="2.1%"
           color="amber"
         />
       </div>
@@ -277,7 +273,6 @@ function OrdersSection() {
         </div>
         <div className="flex items-center space-x-4">
           <div className="relative">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Search orders..."
@@ -474,7 +469,6 @@ function InventorySection() {
       <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="relative">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Search by name or code..."
@@ -564,18 +558,6 @@ function InventorySection() {
                   
                   {/* Stock Level Indicator */}
                   <div className="pt-2">
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
-                      <span>Stock Level</span>
-                      <span>{Math.round((item.quantity / 100) * 100)}%</span>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          item.quantity < 10 ? 'bg-red-500' : 'bg-emerald-500'
-                        }`}
-                        style={{ width: `${Math.min(100, (item.quantity / 100) * 100)}%` }}
-                      ></div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -813,7 +795,6 @@ function ProductModal({ onClose, onSave, product, title }: any) {
                 Price {isWeighed && "(per kg)"}
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Ksh</span>
                 <input
                   type="number"
                   step="0.01"
