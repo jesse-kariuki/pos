@@ -542,9 +542,9 @@ export default function CashierDashboard() {
 
           {/* Right Panel - Payment */}
           <div className={`lg:w-1/3 transition-all duration-300 ${showPaymentSection ? 'block' : 'hidden lg:block'}`}>
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700/50 shadow-2xl h-full overflow-hidden">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700/50 shadow-2xl h-full flex flex-col overflow-hidden">
               {/* Payment Header */}
-              <div className="p-6 border-b border-gray-700/50">
+              <div className="p-6 border-b border-gray-700/50 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="p-3 bg-gradient-to-br from-emerald-900 to-emerald-800 rounded-xl">
@@ -564,8 +564,8 @@ export default function CashierDashboard() {
                 </div>
               </div>
 
-              {/* Payment Content */}
-              <div className="p-6 space-y-6">
+              {/* Payment Content - SCROLLABLE */}
+              <div className="p-6 space-y-6 overflow-y-auto flex-1">
                 {/* Barcode Scanner */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-300 mb-2 flex items-center space-x-2">
