@@ -337,7 +337,6 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
         <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaSearch className="h-4 w-4 text-gray-400" />
             </div>
             <input
               type="text"
@@ -623,7 +622,6 @@ function InventorySection({ isDarkMode }: { isDarkMode: boolean }) {
         <div className="space-y-3 md:space-y-0">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaSearch className="h-4 w-4 text-gray-400" />
             </div>
             <input
               type="text"
@@ -708,7 +706,7 @@ function InventorySection({ isDarkMode }: { isDarkMode: boolean }) {
                   <div className="flex justify-between items-center">
                     <span className={`${themeClasses.text.secondary} text-sm`}>Price</span>
                     <span className={`font-bold ${themeClasses.text.primary} text-base md:text-lg`}>
-                      Ksh {item.product?.sellingPrice?.toFixed(2)}
+                       {item.product?.sellingPrice?.toFixed(2)}
                       {item.product?.type === 'WEIGHED' && <span className={`text-xs ${themeClasses.text.muted} ml-1`}>/kg</span>}
                     </span>
                   </div>
@@ -1117,7 +1115,6 @@ function ProductModal({ onClose, onSave, product, title, isDarkMode }: any) {
                 Price {isWeighed && "(per kg)"}
               </label>
               <div className="relative">
-                <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${themeClasses.text.muted} text-sm`}>Ksh</span>
                 <input
                   type="number"
                   step="0.01"
