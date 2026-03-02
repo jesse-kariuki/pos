@@ -1,7 +1,6 @@
 package Retail.POS.service.impl;
 
 import Retail.POS.config.JwtProvider;
-import Retail.POS.domain.UserRole;
 import Retail.POS.exceptions.UserException;
 import Retail.POS.models.User;
 import Retail.POS.repository.UserRepository;
@@ -23,9 +22,7 @@ public class UserServiceImpl implements UserService {
         String email = jwtProvider.getEmailFromToken(token);
         User user = userRepository.findByEmail(email);
 
-        if (user.getRole() == UserRole.ROLE_ADMIN) {
-            throw new UserException("Creation of admin users is not allowed");
-        }
+        
 
         if(user == null) {
             throw new UserException("User with email " + email + " not found");

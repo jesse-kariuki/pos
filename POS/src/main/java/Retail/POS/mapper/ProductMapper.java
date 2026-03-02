@@ -26,7 +26,6 @@ public class ProductMapper {
                 .code(productDto.getCode())
                 .description(productDto.getDescription())
                 .sellingPrice(productDto.getSellingPrice())
-                // ADD THESE TWO FIELDS
                 .type(productDto.getType())
                 .pricePerKg(productDto.getPricePerKg())
                 .image(productDto.getImage())
