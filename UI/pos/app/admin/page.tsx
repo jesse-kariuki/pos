@@ -337,7 +337,6 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
         <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaSearch className={themeClasses.text.muted} />
             </div>
             <input
               type="text"
@@ -644,7 +643,6 @@ function InventorySection({ isDarkMode }: { isDarkMode: boolean }) {
         <div className="space-y-3 md:space-y-0">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaSearch className={themeClasses.text.muted} />
             </div>
             <input
               type="text"
