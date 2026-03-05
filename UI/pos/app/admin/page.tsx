@@ -889,6 +889,7 @@ function InventorySection({ isDarkMode }: { isDarkMode: boolean }) {
         code: updatedData.code,
         sellingPrice: parseFloat(updatedData.price),
         type: updatedData.type,
+
       });
       loadInventory();
       setShowEdit(null);
@@ -1143,7 +1144,7 @@ function InventorySection({ isDarkMode }: { isDarkMode: boolean }) {
                     >
                       {item.product?.type === "WEIGHED"
                         ? `${item.quantity.toFixed(3)} kg`
-                        : `${Math.round(item.quantity)} pcs`}
+                        : `${item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(2)} pcs`}
                     </span>
                   </div>
                 </div>
@@ -1665,7 +1666,7 @@ function ProductModal({ onClose, onSave, product, title, isDarkMode }: any) {
               </label>
               <input
                 type="number"
-                step={isWeighed ? "0.001" : "1"}
+                step={isWeighed ? "0.001" : "0.01"}
                 placeholder={isWeighed ? "0.000" : "0"}
                 value={form.stock}
                 onChange={(e) => setForm({ ...form, stock: e.target.value })}
