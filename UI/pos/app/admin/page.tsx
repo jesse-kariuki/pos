@@ -887,6 +887,7 @@ function InventorySection({ isDarkMode }: { isDarkMode: boolean }) {
         name: updatedData.name,
         code: updatedData.code,
         sellingPrice: parseFloat(updatedData.price),
+        type: updatedData.type,
       });
       loadInventory();
       setShowEdit(null);
