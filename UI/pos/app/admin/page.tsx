@@ -28,7 +28,6 @@ import {
   FaChevronRight,
 } from "react-icons/fa";
 
-const [currentPage, setCurrentPage] = useState(1);
 const ITEMS_PER_PAGE = 10;
 
 // --- Dashboard Section (Mobile Optimized) ---
@@ -368,6 +367,8 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+
 
   useEffect(() => {
     const fetchOrders = async () => {
