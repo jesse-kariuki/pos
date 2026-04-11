@@ -41,6 +41,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/orders/**").permitAll()
                         .requestMatchers("/api/scan/**").permitAll()
+                        .requestMatchers("/api/purchases/**").permitAll()
+                        .requestMatchers("/api/reports/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/products/search").permitAll()
                         .requestMatchers("/api/super-admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

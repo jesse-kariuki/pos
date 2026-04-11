@@ -1,5 +1,11 @@
 package Retail.POS.service.impl;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
+import Retail.POS.exceptions.ResourceNotFoundException;
 import Retail.POS.mapper.InventoryMapper;
 import Retail.POS.models.Inventory;
 import Retail.POS.models.Product;
@@ -9,10 +15,6 @@ import Retail.POS.repository.InventoryRepository;
 import Retail.POS.repository.ProductRepository;
 import Retail.POS.service.InventoryService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,14 +25,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     public InventoryResponseDto createInventory(InventoryRequestDto request) throws Exception {
-        Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new Exception("Product not found with id: " + request.getProductId()));
-
-        if (inventoryRepository.existsByProduct(product)) {
-            throw new Exception(
-                    "Inventory already exists for product: " + product.getName()
-            );
-        }
+        Product product = productRepository.findById(request.getProductId())                  .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + request.getProductId()));            if (inventoryRepository.existsByProduct(product)) {              throw new IllegalStateException(                      "Inventory already exists for product: " + product.getName()              );          }
 
         Inventory inventory = Inventory.builder().
                 product(product).
@@ -46,9 +41,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     public InventoryResponseDto updateInventory(Long id, InventoryRequestDto request) throws Exception {
-        Inventory inventory = inventoryRepository.findById(id).orElseThrow(
-                ()-> new Exception("Inventory not found with id: " + id)
-        );
+        Inventory inventory = inventoryRepository.findById(id).orElseThrow(                  ()-> new ResourceNotFoundException("Inventory not found with id: " + id)          );
         inventory.setQuantity(request.getQuantity());
         Inventory savedInventory = inventoryRepository.save(inventory);
 
@@ -76,9 +69,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     public InventoryResponseDto getInventoryByProductSku(String sku) throws Exception {
-         Inventory inventory = inventoryRepository.findByProduct_Code(sku).orElseThrow(
-                 ()-> new Exception("Inventory not found with code: " + sku)
-                     );
+         Inventory inventory = inventoryRepository.findByProduct_Code(sku).orElseThrow(                   ()-> new ResourceNotFoundException("Inventory not found with code: " + sku)                       );
             return InventoryMapper.toResponseDto(inventory);
     }
 

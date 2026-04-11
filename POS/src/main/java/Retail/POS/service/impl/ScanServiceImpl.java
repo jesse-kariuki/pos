@@ -1,16 +1,17 @@
 package Retail.POS.service.impl;
 
-import Retail.POS.domain.ProductType;
-import Retail.POS.models.Product;
-import Retail.POS.repository.ProductRepository;
-import Retail.POS.payload.dto.CartItemDto;
-import Retail.POS.service.ScanService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.text.DecimalFormat;
+
+import org.springframework.stereotype.Service;
+
+import Retail.POS.domain.ProductType;
+import Retail.POS.exceptions.ResourceNotFoundException;
+import Retail.POS.models.Product;
+import Retail.POS.payload.dto.CartItemDto;
+import Retail.POS.repository.ProductRepository;
+import Retail.POS.service.ScanService;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -32,12 +33,7 @@ public class ScanServiceImpl implements ScanService {
         String plu = barcode.substring(2, 7);
         double totalFromBarcode = Integer.parseInt(barcode.substring(7, 12)) / 100.0;
 
-        Product product = productRepository.findByCode(plu)
-                .orElseThrow(() -> new RuntimeException("PLU " + plu + " not found in system"));
-
-        if (product.getType() != ProductType.WEIGHED) {
-            throw new RuntimeException("Product " + product.getName() + " is not set as a WEIGHED item.");
-        }
+        Product product = productRepository.findByCode(plu)                  .orElseThrow(() -> new ResourceNotFoundException("PLU " + plu + " not found in system"));            if (product.getType() != ProductType.WEIGHED) {              throw new ResourceNotFoundException("Product " + product.getName() + " is not set as a WEIGHED item.");          }
         double rawWeight = totalFromBarcode / product.getSellingPrice();
 
         double weight = BigDecimal.valueOf(rawWeight)
@@ -55,10 +51,7 @@ public class ScanServiceImpl implements ScanService {
     }
 
     private CartItemDto handleFixedBarcode(String barcode) {
-        Product product = productRepository.findByCode(barcode)
-                .orElseThrow(() -> new RuntimeException("Barcode " + barcode + " not recognized"));
-
-        return CartItemDto.builder()
+        Product product = productRepository.findByCode(barcode)                  .orElseThrow(() -> new ResourceNotFoundException("Barcode " + barcode + " not recognized"));            return CartItemDto.builder()
                 .productId(product.getId())
                 .productName(product.getName())
                 .productSku(product.getCode())

@@ -1,60 +1,13 @@
-# Testing Plan for POS Application
+# POS Exception Handling Implementation
 
-## Overview
-Comprehensive testing for the Spring Boot POS system, including unit, integration, and end-to-end tests.
+## Status: In Progress [0/9]
 
-## Test Categories
+### 1. Create ResourceNotFoundException ✅ **DONE**
+### 2. Update ApiResponse for error responses ✅ **DONE**
+### 3. Create GlobalExceptionHandler ✅ **DONE**
+### 4. Refactor PurchaseServiceImpl ✅ **DONE**\n### 5. Refactor ScanServiceImpl ✅ **DONE**\n### 6. Refactor InventoryServiceImpl ✅ **DONE**
+### 7. Refactor ProductServiceImpl ✅ **DONE**
+### 8. Handle UserException in GlobalHandler ✅ **DONE**
+### 9. Test all endpoints & complete ✅ [PENDING]
 
-### 1. Unit Tests for Services
-- [ ] AuthServiceTest
-- [ ] InventoryServiceTest
-- [ ] OrderServiceTest
-- [ ] ProductServiceTest
-- [ ] ScanServiceTest
-- [ ] StoreServiceTest
-- [ ] UserServiceTest
-
-### 2. Integration Tests for Controllers
-- [ ] AuthControllerTest
-- [ ] InventoryControllerTest
-- [ ] OrderControllerTest
-- [ ] ProductControllerTest
-- [ ] ScanControllerTest
-- [ ] UserControllerTest
-
-### 3. Unit Tests for Mappers
-- [ ] InventoryMapperTest
-- [ ] OrderMapperTest
-- [ ] ProductMapperTest
-- [ ] UserMapperTest
-
-### 4. Unit Tests for Exceptions
-- [ ] InsufficientStockExceptionTest
-- [ ] UserExceptionTest
-
-### 5. Repository Tests
-- [ ] InventoryRepositoryTest
-- [ ] OrderRepositoryTest
-- [ ] ProductRepositoryTest
-- [ ] UserRepositoryTest
-
-### 6. Configuration Tests
-- [ ] JwtProviderTest
-- [ ] JwtValidatorTest
-- [ ] SecurityConfigTest
-
-### 7. Model Tests
-- [ ] InventoryTest
-- [ ] OrderTest
-- [ ] OrderItemTest
-- [ ] ProductTest
-- [ ] StoreTest
-- [ ] UserTest
-
-### 8. End-to-End Tests
-- [ ] PosApplicationE2ETest
-
-## Followup Steps
-- [ ] Run `mvn test` after creating all tests
-- [ ] Fix any compilation or runtime issues
-- [ ] Add test utilities if needed
+*Updated: 2024-XX-XX*

@@ -37,6 +37,7 @@ public class ProductController {
             @PathVariable Long id,
             @RequestBody ProductDto productDto,
             @RequestHeader("Authorization") String jwt) throws Exception, UserException {
+        System.out.println("Type received: " + productDto.getType());
         User user = userService.getUserFromJwtToken(jwt);
         return ResponseEntity.ok(productService.updateProduct(id, productDto, user));
     }
