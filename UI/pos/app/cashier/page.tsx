@@ -79,8 +79,8 @@
           const productList = inventoryData.map((item: any) => item.product);
           setProducts(productList);
         } catch (err: any) {
-          console.error("Error loading inventory:", err);
-          setError(err.message || "Failed to load products");
+          // console.error("Error loading inventory:", err);
+          // setError(err.message || "Failed to load products");
         } finally {
           setLoading(false);
         }

@@ -71,18 +71,7 @@ public class JwtValidator extends OncePerRequestFilter {
         String path = request.getServletPath();
         // Skip JWT validation for:
         // 1. Auth endpoints (public)
-        // 2. Orders endpoints (public - handled by Spring Security, not JWT)
-        // 3. Scan endpoints (public)
-        // 4. Purchases endpoints (public)
-        // 5. Reports endpoints (public)
-        // 6. Product search GET endpoints (public)
-        // 7. ALL OPTIONS requests (CORS Preflight)
-        return path.startsWith("/api/auth/") || 
-               path.startsWith("/api/orders") ||
-               path.startsWith("/api/scan") ||
-               path.startsWith("/api/purchases") ||
-               path.startsWith("/api/reports") ||
-               (path.startsWith("/api/products/search") && request.getMethod().equals("GET")) ||
-               request.getMethod().equals("OPTIONS");
+        // 2. ALL OPTIONS requests (CORS Preflight)
+        return path.startsWith("/api/auth/") || request.getMethod().equals("OPTIONS");
     }
 }
