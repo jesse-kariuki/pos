@@ -61,9 +61,12 @@
       }, []);
 
       useEffect(() => {
+         console.log("All localStorage keys:", Object.keys(localStorage));
+  console.log("token value:", localStorage.getItem("token"));
         const token = localStorage.getItem("token");
 
         if (!token) {
+
           setError("No authentication token found. Please login again.");
           return;
         }
