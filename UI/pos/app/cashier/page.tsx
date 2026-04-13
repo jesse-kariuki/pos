@@ -64,7 +64,7 @@
         const token = localStorage.getItem("token");
 
         if (!token) {
-          // setError("No authentication token found. Please login again.");
+          setError("No authentication token found. Please login again.");
           return;
         }
 
