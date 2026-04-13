@@ -38,7 +38,7 @@ export default function LoginPage() {
       const result = await response.json();
 
       if (response.ok) {
-        const tokenToStore = result.jwt || result.token;
+        const tokenToStore = result.data?.jwt || result.jwt || result.token;
         if (tokenToStore) {
           localStorage.setItem("token", tokenToStore);
         } else {
