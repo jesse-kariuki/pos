@@ -689,9 +689,16 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
   }, []);
 
   const searchAndStatusFiltered = orders.filter((order) => {
+    const orderIdText = order?.id != null ? String(order.id) : "";
+    const paymentMethodText =
+      typeof order?.paymentMethod === "string"
+        ? order.paymentMethod.toLowerCase()
+        : "";
+    const normalizedSearch = searchTerm.toLowerCase();
+
     const matchesSearch =
-      order.id?.toString().includes(searchTerm) ||
-      order.paymentMethod?.toLowerCase().includes(searchTerm.toLowerCase());
+      orderIdText.includes(searchTerm) ||
+      paymentMethodText.includes(normalizedSearch);
 
     const matchesStatus =
       statusFilter === "all" || order.status === statusFilter;
