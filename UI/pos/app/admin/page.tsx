@@ -62,6 +62,16 @@ const WEEKDAY_NAMES = [
   "Sunday",
 ];
 
+function parseValidDate(value: unknown): Date | null {
+  if (!value) return null;
+  const date = new Date(value as string | number | Date);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isCompletedOrder(order: any): boolean {
+  return String(order?.status || "").toUpperCase() === "COMPLETED";
+}
+
 function getStartOfWeekMonday(input: Date) {
   const date = new Date(input);
   const day = date.getDay();
@@ -167,7 +177,7 @@ function DashboardSection({ isDarkMode }: { isDarkMode: boolean }) {
   };
 
   const salesTrend = useMemo(() => {
-    const orders = stats.allOrders || [];
+    const orders = (stats.allOrders || []).filter(isCompletedOrder);
 
     const dailyReference = new Date();
     dailyReference.setDate(dailyReference.getDate() + dailyWeekOffset * 7);
@@ -184,7 +194,8 @@ function DashboardSection({ isDarkMode }: { isDarkMode: boolean }) {
 
       return orders
         .filter((order) => {
-          const createdAt = new Date(order.createdAt);
+          const createdAt = parseValidDate(order?.createdAt);
+          if (!createdAt) return false;
           return createdAt >= dayStart && createdAt < dayEnd;
         })
         .reduce((sum, order) => sum + (Number(order.totalAmount) || 0), 0);
@@ -215,7 +226,8 @@ function DashboardSection({ isDarkMode }: { isDarkMode: boolean }) {
     const weeklyValues = weeklyRanges.map((range) =>
       orders
         .filter((order) => {
-          const createdAt = new Date(order.createdAt);
+          const createdAt = parseValidDate(order?.createdAt);
+          if (!createdAt) return false;
           return createdAt >= range.start && createdAt <= range.end;
         })
         .reduce((sum, order) => sum + (Number(order.totalAmount) || 0), 0),
@@ -228,7 +240,8 @@ function DashboardSection({ isDarkMode }: { isDarkMode: boolean }) {
 
     const monthlyMap = new Map<string, number>();
     orders.forEach((order) => {
-      const createdAt = new Date(order.createdAt);
+      const createdAt = parseValidDate(order?.createdAt);
+      if (!createdAt) return;
       const key = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}`;
       monthlyMap.set(key, (monthlyMap.get(key) || 0) + (Number(order.totalAmount) || 0));
     });
@@ -708,12 +721,6 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
     return matchesSearch && matchesStatus;
   });
 
-  const parseOrderDate = (value: unknown) => {
-    if (!value) return null;
-    const date = new Date(value as string | number | Date);
-    return Number.isNaN(date.getTime()) ? null : date;
-  };
-
   const getMonthRange = (monthValue: string) => {
     const [year, month] = monthValue.split("-").map(Number);
     const start = new Date(year, month - 1, 1);
@@ -771,16 +778,18 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
   };
 
   const monthFilteredOrders = searchAndStatusFiltered.filter((order) => {
-    const createdAt = parseOrderDate(order?.createdAt);
+    const createdAt = parseValidDate(order?.createdAt);
     if (!createdAt) return false;
     return createdAt >= monthStart && createdAt <= monthEnd;
   });
 
   const filteredOrders = monthFilteredOrders.filter((order) => {
-    const createdAt = parseOrderDate(order?.createdAt);
+    const createdAt = parseValidDate(order?.createdAt);
     if (!createdAt) return false;
     return createdAt >= selectedWeek.start && createdAt <= selectedWeek.end;
   });
+
+  const salesOrdersInWeek = filteredOrders.filter(isCompletedOrder);
 
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
   const paginatedOrders = filteredOrders.slice(
@@ -813,14 +822,14 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
     const nextDay = new Date(dayDate);
     nextDay.setDate(nextDay.getDate() + 1);
 
-    const recordsAll = filteredOrders.filter((order) => {
-      const createdAt = parseOrderDate(order?.createdAt);
+    const recordsAll = salesOrdersInWeek.filter((order) => {
+      const createdAt = parseValidDate(order?.createdAt);
       if (!createdAt) return false;
       return createdAt >= dayDate && createdAt < nextDay;
     });
 
     const records = paginatedOrders.filter((order) => {
-      const createdAt = parseOrderDate(order?.createdAt);
+      const createdAt = parseValidDate(order?.createdAt);
       if (!createdAt) return false;
       return createdAt >= dayDate && createdAt < nextDay;
     });
@@ -844,17 +853,17 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
     };
   });
 
-  const weekTotal = filteredOrders.reduce(
+  const weekTotal = salesOrdersInWeek.reduce(
     (sum, order) => sum + (Number(order.totalAmount) || 0),
     0,
   );
-  const weekTransactions = filteredOrders.length;
+  const weekTransactions = salesOrdersInWeek.length;
   const weekAvg = weekTransactions > 0 ? weekTotal / weekTransactions : 0;
 
   const monthOptions = Array.from(
     new Set(
       orders
-        .map((order) => parseOrderDate(order?.createdAt))
+        .map((order) => parseValidDate(order?.createdAt))
         .filter((date): date is Date => Boolean(date))
         .map(
           (createdAt) =>
@@ -890,19 +899,26 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
     const sortedByNewest = [...orders]
       .map((order) => ({
         order,
-        createdAt: parseOrderDate(order?.createdAt),
+        createdAt: parseValidDate(order?.createdAt),
       }))
       .filter((item): item is { order: any; createdAt: Date } =>
         Boolean(item.createdAt),
       )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-    if (sortedByNewest.length === 0) {
+    const completedSortedByNewest = sortedByNewest.filter((item) =>
+      isCompletedOrder(item.order),
+    );
+
+    const referenceOrders =
+      completedSortedByNewest.length > 0 ? completedSortedByNewest : sortedByNewest;
+
+    if (referenceOrders.length === 0) {
       setHasInitializedDateFilters(true);
       return;
     }
 
-    const latestOrderDate = sortedByNewest[0].createdAt;
+    const latestOrderDate = referenceOrders[0].createdAt;
     const targetMonth = `${latestOrderDate.getFullYear()}-${String(latestOrderDate.getMonth() + 1).padStart(2, "0")}`;
     const weeks = getWeekRangesForMonth(
       latestOrderDate.getFullYear(),
