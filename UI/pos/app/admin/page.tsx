@@ -685,7 +685,7 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
   });
   const [activeWeekIndex, setActiveWeekIndex] = useState(0);
   const [expandedDayKey, setExpandedDayKey] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [dayPageMap, setDayPageMap] = useState<Record<string, number>>({});
   const [hasInitializedDateFilters, setHasInitializedDateFilters] =
     useState(false);
 
@@ -791,12 +791,6 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
 
   const salesOrdersInWeek = filteredOrders.filter(isCompletedOrder);
 
-  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
-  const paginatedOrders = filteredOrders.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
-
   const weekdayNames = [
     "Monday",
     "Tuesday",
@@ -828,11 +822,19 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
       return createdAt >= dayDate && createdAt < nextDay;
     });
 
-    const records = paginatedOrders.filter((order) => {
+    const records = salesOrdersInWeek.filter((order) => {
       const createdAt = parseValidDate(order?.createdAt);
       if (!createdAt) return false;
       return createdAt >= dayDate && createdAt < nextDay;
     });
+
+    const page = dayPageMap[getDateKey(dayDate)] || 1;
+    const totalPages = Math.max(1, Math.ceil(records.length / ITEMS_PER_PAGE));
+    const safePage = Math.min(page, totalPages);
+    const paginatedRecords = records.slice(
+      (safePage - 1) * ITEMS_PER_PAGE,
+      safePage * ITEMS_PER_PAGE,
+    );
 
     const total = recordsAll.reduce(
       (sum, order) => sum + (Number(order.totalAmount) || 0),
@@ -850,6 +852,9 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
       count: recordsAll.length,
       total,
       records,
+      paginatedRecords,
+      page: safePage,
+      totalPages,
     };
   });
 
@@ -890,7 +895,7 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
   useEffect(() => {
     setActiveWeekIndex(0);
     setExpandedDayKey(null);
-    setCurrentPage(1);
+    setDayPageMap({});
   }, [monthFilter]);
 
   useEffect(() => {
@@ -979,7 +984,6 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  setCurrentPage(1);
                 }}
                 className={`w-full pl-8 pr-3 py-2 rounded-lg focus:ring-2 text-xs sm:text-sm ${themeClasses.input}`}
               />
@@ -1029,7 +1033,7 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
                     onClick={() => {
                       setActiveWeekIndex(idx);
                       setExpandedDayKey(null);
-                      setCurrentPage(1);
+                      setDayPageMap({});
                     }}
                     className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium whitespace-nowrap border transition-colors ${
                       idx === safeWeekIndex
@@ -1089,9 +1093,13 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
                 className={`${themeClasses.background} ${themeClasses.border} border rounded-xl md:rounded-2xl overflow-hidden`}
               >
                 <button
-                  onClick={() =>
-                    setExpandedDayKey((prev) => (prev === day.key ? null : day.key))
-                  }
+                  onClick={() => {
+                    setExpandedDayKey((prev) => (prev === day.key ? null : day.key));
+                    setDayPageMap((prev) => ({
+                      ...prev,
+                      [day.key]: prev[day.key] || 1,
+                    }));
+                  }}
                   className={`w-full p-3 md:p-4 flex items-center justify-between gap-2 ${themeClasses.hover}`}
                 >
                   <div className="min-w-0 flex items-center gap-2 md:gap-3 text-left">
@@ -1152,8 +1160,8 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
                         <tbody
                           className={`divide-y ${isDarkMode ? "divide-gray-700" : "divide-gray-100"}`}
                         >
-                          {day.records.length > 0 ? (
-                            day.records.map((order) => (
+                          {day.paginatedRecords.length > 0 ? (
+                            day.paginatedRecords.map((order) => (
                               <tr key={order.id} className={themeClasses.hover}>
                                 <td className="py-3 px-3 md:px-4 text-xs md:text-sm">
                                   <div className={`font-semibold ${themeClasses.text.primary}`}>
@@ -1211,13 +1219,57 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
                                 colSpan={6}
                                 className={`py-8 text-center text-xs md:text-sm ${themeClasses.text.secondary}`}
                               >
-                                No transactions for this day on the current page.
+                                No transactions for this day.
                               </td>
                             </tr>
                           )}
                         </tbody>
                       </table>
                     </div>
+
+                    {day.totalPages > 1 && (
+                      <div
+                        className={`px-3 md:px-4 py-2 flex items-center justify-between text-[11px] md:text-xs border-t ${isDarkMode ? "border-gray-700" : "border-gray-100"}`}
+                      >
+                        <span className={themeClasses.text.secondary}>
+                          Page {day.page} of {day.totalPages}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              setDayPageMap((prev) => ({
+                                ...prev,
+                                [day.key]: Math.max(1, day.page - 1),
+                              }))
+                            }
+                            disabled={day.page === 1}
+                            className={`p-1.5 rounded-md ${
+                              day.page === 1
+                                ? `${themeClasses.text.muted} opacity-40 cursor-not-allowed`
+                                : `${themeClasses.text.secondary} ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}`
+                            }`}
+                          >
+                            <FaChevronLeft size={12} />
+                          </button>
+                          <button
+                            onClick={() =>
+                              setDayPageMap((prev) => ({
+                                ...prev,
+                                [day.key]: Math.min(day.totalPages, day.page + 1),
+                              }))
+                            }
+                            disabled={day.page === day.totalPages}
+                            className={`p-1.5 rounded-md ${
+                              day.page === day.totalPages
+                                ? `${themeClasses.text.muted} opacity-40 cursor-not-allowed`
+                                : `${themeClasses.text.secondary} ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}`
+                            }`}
+                          >
+                            <FaChevronRight size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     <div
                       className={`px-3 md:px-4 py-2.5 flex items-center justify-between text-[11px] md:text-xs ${themeClasses.text.secondary} ${themeClasses.headerBg}`}
@@ -1250,85 +1302,6 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
           </div>
         )}
       </div>
-
-      {totalPages > 1 && (
-        <div
-          className={`flex-shrink-0 flex items-center justify-between px-4 py-3 mt-4 rounded-xl ${themeClasses.background} border ${themeClasses.border}`}
-        >
-          <p className={`text-sm ${themeClasses.text.secondary}`}>
-            Page{" "}
-            <span className={`font-semibold ${themeClasses.text.primary}`}>
-              {currentPage}
-            </span>{" "}
-            of{" "}
-            <span className={`font-semibold ${themeClasses.text.primary}`}>
-              {totalPages}
-            </span>
-            <span className="ml-2 text-xs">
-              ({filteredOrders.length} total)
-            </span>
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className={`p-2 rounded-lg transition-colors ${
-                currentPage === 1
-                  ? `${themeClasses.text.muted} cursor-not-allowed opacity-40`
-                  : `${themeClasses.text.secondary} ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}`
-              }`}
-            >
-              <FaChevronLeft size={14} />
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(
-                (p) =>
-                  p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1,
-              )
-              .reduce<(number | "...")[]>((acc, p, idx, arr) => {
-                if (idx > 0 && p - (arr[idx - 1] as number) > 1)
-                  acc.push("...");
-                acc.push(p);
-                return acc;
-              }, [])
-              .map((p, idx) =>
-                p === "..." ? (
-                  <span
-                    key={`ellipsis-${idx}`}
-                    className={`text-sm ${themeClasses.text.muted} px-1`}
-                  >
-                    …
-                  </span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => setCurrentPage(p as number)}
-                    className={`w-8 h-8 text-sm rounded-lg font-medium transition-colors ${
-                      currentPage === p
-                        ? "bg-emerald-500 text-white"
-                        : `${themeClasses.text.secondary} ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}`
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ),
-              )}
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className={`p-2 rounded-lg transition-colors ${
-                currentPage === totalPages
-                  ? `${themeClasses.text.muted} cursor-not-allowed opacity-40`
-                  : `${themeClasses.text.secondary} ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}`
-              }`}
-            >
-              <FaChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
     </section>
   );
 }
