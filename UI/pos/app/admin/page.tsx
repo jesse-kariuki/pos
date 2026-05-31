@@ -1,9 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { inventoryAPI, orderAPI, productAPI } from "@/lib/api-service";
 import { useRouter } from "next/navigation";
 import { PurchasesSection, ReportsSection } from "@/app/PurchasesAndReportsSection"
+import { Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Filler,
+} from "chart.js";
 import { FaShoppingBag, FaChartPie } from "react-icons/fa";
 import {
   FaChartLine,
@@ -28,12 +38,78 @@ import {
   FaSun,
   FaChevronLeft,
   FaChevronRight,
+  FaChevronDown,
+  FaChevronUp,
 } from "react-icons/fa";
 
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Filler,
+);
+
 const ITEMS_PER_PAGE = 10;
+const WEEKDAY_NAMES = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+function getStartOfWeekMonday(input: Date) {
+  const date = new Date(input);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function getWeekRangesForMonth(year: number, monthIndex: number) {
+  const monthStart = new Date(year, monthIndex, 1);
+  const monthEnd = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+  const firstWeekStart = getStartOfWeekMonday(monthStart);
+  const ranges: { start: Date; end: Date; label: string }[] = [];
+  let cursor = new Date(firstWeekStart);
+  let weekNumber = 1;
+
+  while (cursor <= monthEnd) {
+    const weekStart = new Date(cursor);
+    const weekEnd = new Date(cursor);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    const overlapsMonth =
+      (weekStart <= monthEnd && weekStart >= monthStart) ||
+      (weekEnd >= monthStart && weekEnd <= monthEnd) ||
+      (weekStart <= monthStart && weekEnd >= monthEnd);
+
+    if (overlapsMonth) {
+      ranges.push({
+        start: weekStart,
+        end: weekEnd,
+        label: `Wk ${weekNumber}`,
+      });
+      weekNumber += 1;
+    }
+
+    cursor.setDate(cursor.getDate() + 7);
+  }
+
+  return ranges;
+}
 
 // --- Dashboard Section (Mobile Optimized) ---
 function DashboardSection({ isDarkMode }: { isDarkMode: boolean }) {
+  const [trendMode, setTrendMode] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [dailyWeekOffset, setDailyWeekOffset] = useState(0);
+  const [weeklyMonthOffset, setWeeklyMonthOffset] = useState(0);
   const [stats, setStats] = useState({
     todaySales: 0,
     monthSales: 0,
@@ -41,6 +117,7 @@ function DashboardSection({ isDarkMode }: { isDarkMode: boolean }) {
     avgOrderValue: 0,
     topProducts: [] as any[],
     recentOrders: [] as any[],
+    allOrders: [] as any[],
   });
   const [loading, setLoading] = useState(true);
 
@@ -65,6 +142,7 @@ function DashboardSection({ isDarkMode }: { isDarkMode: boolean }) {
           avgOrderValue: orders.length > 0 ? totalValue / orders.length : 0,
           topProducts: topProd || [],
           recentOrders: recentOrders,
+          allOrders: orders || [],
         });
       } catch (err) {
         console.error("Stats load failed", err);
@@ -86,6 +164,196 @@ function DashboardSection({ isDarkMode }: { isDarkMode: boolean }) {
       ? "bg-gray-800 border-gray-700"
       : "bg-white border-gray-100",
     hover: isDarkMode ? "hover:bg-gray-750" : "hover:bg-gray-50",
+  };
+
+  const salesTrend = useMemo(() => {
+    const orders = stats.allOrders || [];
+
+    const dailyReference = new Date();
+    dailyReference.setDate(dailyReference.getDate() + dailyWeekOffset * 7);
+    const dailyWeekStart = getStartOfWeekMonday(dailyReference);
+    const dailyWeekEnd = new Date(dailyWeekStart);
+    dailyWeekEnd.setDate(dailyWeekEnd.getDate() + 6);
+    dailyWeekEnd.setHours(23, 59, 59, 999);
+
+    const dailyValues = WEEKDAY_NAMES.map((_, index) => {
+      const dayStart = new Date(dailyWeekStart);
+      dayStart.setDate(dayStart.getDate() + index);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+
+      return orders
+        .filter((order) => {
+          const createdAt = new Date(order.createdAt);
+          return createdAt >= dayStart && createdAt < dayEnd;
+        })
+        .reduce((sum, order) => sum + (Number(order.totalAmount) || 0), 0);
+    });
+
+    const dailyRanges = getWeekRangesForMonth(
+      dailyWeekStart.getFullYear(),
+      dailyWeekStart.getMonth(),
+    );
+    const weekIndexInMonth =
+      dailyRanges.findIndex(
+        (range) => dailyWeekStart >= range.start && dailyWeekStart <= range.end,
+      ) + 1;
+
+    const dailyPeriodLabel = `Wk ${weekIndexInMonth > 0 ? weekIndexInMonth : 1} · Mon ${dailyWeekStart.getDate()} - Sun ${dailyWeekEnd.getDate()} ${dailyWeekEnd.toLocaleDateString(undefined, {
+      month: "short",
+      year: "numeric",
+    })}`;
+
+    const weeklyReference = new Date();
+    weeklyReference.setMonth(weeklyReference.getMonth() + weeklyMonthOffset, 1);
+    weeklyReference.setHours(0, 0, 0, 0);
+    const weeklyRanges = getWeekRangesForMonth(
+      weeklyReference.getFullYear(),
+      weeklyReference.getMonth(),
+    );
+
+    const weeklyValues = weeklyRanges.map((range) =>
+      orders
+        .filter((order) => {
+          const createdAt = new Date(order.createdAt);
+          return createdAt >= range.start && createdAt <= range.end;
+        })
+        .reduce((sum, order) => sum + (Number(order.totalAmount) || 0), 0),
+    );
+
+    const weeklyPeriodLabel = `${weeklyReference.toLocaleDateString(undefined, {
+      month: "long",
+      year: "numeric",
+    })} - weeks`;
+
+    const monthlyMap = new Map<string, number>();
+    orders.forEach((order) => {
+      const createdAt = new Date(order.createdAt);
+      const key = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}`;
+      monthlyMap.set(key, (monthlyMap.get(key) || 0) + (Number(order.totalAmount) || 0));
+    });
+
+    const monthlyKeys = Array.from(monthlyMap.keys()).sort((a, b) =>
+      a.localeCompare(b),
+    );
+    const monthlyLabels = monthlyKeys.map((key) => {
+      const [year, month] = key.split("-").map(Number);
+      return new Date(year, month - 1, 1).toLocaleDateString(undefined, {
+        month: "short",
+      });
+    });
+    const monthlyValues = monthlyKeys.map((key) => monthlyMap.get(key) || 0);
+
+    if (trendMode === "daily") {
+      return {
+        labels: WEEKDAY_NAMES,
+        values: dailyValues,
+        periodLabel: dailyPeriodLabel,
+        footer: "Daily sales totals for selected week",
+      };
+    }
+
+    if (trendMode === "weekly") {
+      return {
+        labels: weeklyRanges.map((_, index) => `Wk ${index + 1}`),
+        values: weeklyValues,
+        periodLabel: weeklyPeriodLabel,
+        footer: `Weekly sales totals for ${weeklyReference.toLocaleDateString(undefined, {
+          month: "long",
+          year: "numeric",
+        })}`,
+      };
+    }
+
+    return {
+      labels: monthlyLabels,
+      values: monthlyValues,
+      periodLabel: "",
+      footer: "Monthly sales totals across available data",
+    };
+  }, [stats.allOrders, trendMode, dailyWeekOffset, weeklyMonthOffset]);
+
+  const peakValue = salesTrend.values.length
+    ? Math.max(...salesTrend.values)
+    : 0;
+  const peakIndex = salesTrend.values.findIndex((value) => value === peakValue);
+
+  const trendData = {
+    labels: salesTrend.labels,
+    datasets: [
+      {
+        data: salesTrend.values,
+        borderColor: "#22c55e",
+        borderWidth: 2.5,
+        fill: true,
+        backgroundColor: (context: any) => {
+          const chart = context.chart;
+          const { ctx, chartArea } = chart;
+          if (!chartArea) {
+            return "rgba(34,197,94,0.2)";
+          }
+          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          gradient.addColorStop(0, "rgba(34,197,94,0.30)");
+          gradient.addColorStop(1, "rgba(34,197,94,0)");
+          return gradient;
+        },
+        tension: 0.35,
+        pointRadius: (context: any) =>
+          context.dataIndex === peakIndex ? 6 : 3,
+        pointHoverRadius: (context: any) =>
+          context.dataIndex === peakIndex ? 7 : 4,
+        pointBorderWidth: (context: any) =>
+          context.dataIndex === peakIndex ? 3 : 1.5,
+        pointBorderColor: (context: any) =>
+          context.dataIndex === peakIndex ? "#ffffff" : "#22c55e",
+        pointBackgroundColor: "#22c55e",
+      },
+    ],
+  };
+
+  const trendOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        callbacks: {
+          label: (context: any) =>
+            `${context.label}: Ksh ${Number(context.parsed.y || 0).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false,
+        },
+        ticks: {
+          color: isDarkMode ? "#9ca3af" : "#6b7280",
+          font: {
+            size: 11,
+          },
+        },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: isDarkMode ? "#9ca3af" : "#6b7280",
+          font: {
+            size: 11,
+          },
+          callback: (value: any) => `Ksh ${Number(value).toLocaleString()}`,
+        },
+        grid: {
+          color: isDarkMode ? "rgba(75,85,99,0.35)" : "rgba(209,213,219,0.6)",
+        },
+      },
+    },
   };
 
   if (loading) {
@@ -225,59 +493,88 @@ function DashboardSection({ isDarkMode }: { isDarkMode: boolean }) {
             </div>
           </div>
 
-          {/* Recent Orders - Mobile Optimized */}
+          {/* Sales Trends - Mobile Optimized */}
           <div
             className={`${themeClasses.card} rounded-xl md:rounded-2xl shadow-lg overflow-hidden flex flex-col`}
           >
             <div
               className={`p-4 md:p-6 border-b ${isDarkMode ? "border-gray-700" : "border-gray-100"} flex-shrink-0`}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <h3
                   className={`text-base md:text-lg font-semibold ${themeClasses.text.primary}`}
                 >
-                  Recent Transactions
+                  Sales trends
                 </h3>
-                <span className="text-xs md:text-sm text-blue-600 font-medium">
-                  Last 5
-                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  {(["daily", "weekly", "monthly"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setTrendMode(mode)}
+                      className={`px-2 py-1 md:px-3 rounded-md text-[11px] md:text-xs font-medium capitalize border transition-colors ${
+                        trendMode === mode
+                          ? "bg-emerald-500 text-white border-emerald-500"
+                          : isDarkMode
+                            ? "bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-650"
+                            : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-            <div
-              className={`divide-y ${isDarkMode ? "divide-gray-700" : "divide-gray-100"} flex-1 overflow-y-auto max-h-[300px] md:max-h-none`}
-            >
-              {stats.recentOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className={`p-3 md:p-4 ${themeClasses.hover} transition-colors`}
+            {trendMode !== "monthly" && (
+              <div
+                className={`px-3 py-2 md:px-4 md:py-3 border-b ${isDarkMode ? "border-gray-700" : "border-gray-100"} flex items-center justify-between gap-2`}
+              >
+                <button
+                  onClick={() =>
+                    trendMode === "daily"
+                      ? setDailyWeekOffset((prev) => prev - 1)
+                      : setWeeklyMonthOffset((prev) => prev - 1)
+                  }
+                  className={`p-1.5 md:p-2 rounded-md ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <div
-                        className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${order.status === "COMPLETED" ? "bg-emerald-500" : "bg-amber-500"}`}
-                      ></div>
-                      <span
-                        className={`font-medium ${themeClasses.text.primary} text-sm md:text-base`}
-                      >
-                        #{order.id}
-                      </span>
-                    </div>
-                    <span className={`text-xs ${themeClasses.text.muted}`}>
-                      {new Date(order.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs md:text-sm">
-                    <span className={themeClasses.text.secondary}>
-                      {order.paymentMethod}
-                    </span>
-                    <span
-                      className={`font-semibold ${themeClasses.text.primary}`}
-                    >
-                      Ksh {order.totalAmount?.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                  <FaChevronLeft className={`text-xs ${themeClasses.text.secondary}`} />
+                </button>
+                <p
+                  className={`text-[11px] md:text-xs font-medium ${themeClasses.text.secondary} text-center truncate`}
+                >
+                  {salesTrend.periodLabel}
+                </p>
+                <button
+                  onClick={() =>
+                    trendMode === "daily"
+                      ? setDailyWeekOffset((prev) => prev + 1)
+                      : setWeeklyMonthOffset((prev) => prev + 1)
+                  }
+                  className={`p-1.5 md:p-2 rounded-md ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
+                >
+                  <FaChevronRight className={`text-xs ${themeClasses.text.secondary}`} />
+                </button>
+              </div>
+            )}
+
+            <div className="flex-1 min-h-[220px] md:min-h-[280px] p-2 md:p-4 overflow-x-auto">
+              <div className="min-w-[420px] sm:min-w-0 h-full">
+                <Line data={trendData as any} options={trendOptions as any} />
+              </div>
+            </div>
+
+            <div
+              className={`px-3 py-2 md:px-4 md:py-3 border-t ${isDarkMode ? "border-gray-700" : "border-gray-100"} flex items-center justify-between gap-2`}
+            >
+              <p className={`text-[11px] md:text-xs ${themeClasses.text.secondary}`}>
+                {salesTrend.footer}
+              </p>
+              <p className="text-[11px] md:text-sm font-semibold text-emerald-500 whitespace-nowrap">
+                Peak: Ksh {peakValue.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </p>
             </div>
           </div>
         </div>
@@ -369,6 +666,12 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [activeWeekIndex, setActiveWeekIndex] = useState(0);
+  const [expandedDayKey, setExpandedDayKey] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -385,7 +688,7 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
     fetchOrders();
   }, []);
 
-  const filteredOrders = orders.filter((order) => {
+  const searchAndStatusFiltered = orders.filter((order) => {
     const matchesSearch =
       order.id?.toString().includes(searchTerm) ||
       order.paymentMethod?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -396,11 +699,142 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
     return matchesSearch && matchesStatus;
   });
 
+  const getMonthRange = (monthValue: string) => {
+    const [year, month] = monthValue.split("-").map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0, 23, 59, 59, 999);
+    return { start, end, year, month: month - 1 };
+  };
+
+  const getWeekRangesForMonth = (year: number, monthIndex: number) => {
+    const monthStart = new Date(year, monthIndex, 1);
+    const monthEnd = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+
+    const firstWeekStart = new Date(monthStart);
+    const startDay = firstWeekStart.getDay();
+    const diffToMonday = startDay === 0 ? -6 : 1 - startDay;
+    firstWeekStart.setDate(firstWeekStart.getDate() + diffToMonday);
+    firstWeekStart.setHours(0, 0, 0, 0);
+
+    const ranges: { start: Date; end: Date; label: string }[] = [];
+    let cursor = new Date(firstWeekStart);
+    let weekNumber = 1;
+
+    while (cursor <= monthEnd) {
+      const weekStart = new Date(cursor);
+      const weekEnd = new Date(cursor);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      const overlapsMonth =
+        (weekStart <= monthEnd && weekStart >= monthStart) ||
+        (weekEnd >= monthStart && weekEnd <= monthEnd) ||
+        (weekStart <= monthStart && weekEnd >= monthEnd);
+
+      if (overlapsMonth) {
+        ranges.push({
+          start: weekStart,
+          end: weekEnd,
+          label: `Wk ${weekNumber}`,
+        });
+        weekNumber += 1;
+      }
+
+      cursor.setDate(cursor.getDate() + 7);
+    }
+
+    return ranges;
+  };
+
+  const { start: monthStart, end: monthEnd, year, month } = getMonthRange(monthFilter);
+  const weekRanges = getWeekRangesForMonth(year, month);
+  const safeWeekIndex = Math.min(activeWeekIndex, Math.max(weekRanges.length - 1, 0));
+  const selectedWeek = weekRanges[safeWeekIndex] ?? {
+    start: monthStart,
+    end: monthEnd,
+    label: "Wk 1",
+  };
+
+  const monthFilteredOrders = searchAndStatusFiltered.filter((order) => {
+    const createdAt = new Date(order.createdAt);
+    return createdAt >= monthStart && createdAt <= monthEnd;
+  });
+
+  const filteredOrders = monthFilteredOrders.filter((order) => {
+    const createdAt = new Date(order.createdAt);
+    return createdAt >= selectedWeek.start && createdAt <= selectedWeek.end;
+  });
+
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
   const paginatedOrders = filteredOrders.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,
   );
+
+  const weekdayNames = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+
+  const getDateKey = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
+  const dayBuckets = weekdayNames.map((dayName, idx) => {
+    const dayDate = new Date(selectedWeek.start);
+    dayDate.setDate(selectedWeek.start.getDate() + idx);
+    dayDate.setHours(0, 0, 0, 0);
+
+    const nextDay = new Date(dayDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+
+    const records = paginatedOrders.filter((order) => {
+      const createdAt = new Date(order.createdAt);
+      return createdAt >= dayDate && createdAt < nextDay;
+    });
+
+    const total = records.reduce(
+      (sum, order) => sum + (Number(order.totalAmount) || 0),
+      0,
+    );
+
+    return {
+      key: getDateKey(dayDate),
+      dayName,
+      dateLabel: dayDate.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }),
+      count: records.length,
+      total,
+      records,
+    };
+  });
+
+  const weekTotal = filteredOrders.reduce(
+    (sum, order) => sum + (Number(order.totalAmount) || 0),
+    0,
+  );
+  const weekTransactions = filteredOrders.length;
+  const weekAvg = weekTransactions > 0 ? weekTotal / weekTransactions : 0;
+
+  const monthOptions = Array.from(
+    new Set(
+      orders.map((order) => {
+        const createdAt = new Date(order.createdAt);
+        return `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}`;
+      }),
+    ),
+  ).sort((a, b) => (a > b ? -1 : 1));
 
   const themeClasses = {
     background: isDarkMode ? "bg-gray-800" : "bg-white",
@@ -431,296 +865,315 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
     );
   }
 
+  useEffect(() => {
+    setActiveWeekIndex(0);
+    setExpandedDayKey(null);
+    setCurrentPage(1);
+  }, [monthFilter]);
+
   return (
     <section className="h-full flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex flex-col mb-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col mb-4 md:mb-6 gap-3 md:gap-4">
+        <div className="flex items-center justify-between">
           <h2
             className={`text-2xl md:text-3xl font-bold ${themeClasses.text.primary}`}
           >
             Transactions
           </h2>
         </div>
-        <p
-          className={`${themeClasses.text.secondary} text-sm md:text-base mb-4`}
-        >
-          View and manage all customer transactions
+        <p className={`${themeClasses.text.secondary} text-sm md:text-base`}>
+          Week and day transaction breakdown
         </p>
 
-        {/* Mobile Search and Filter */}
-        <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"></div>
-            <input
-              type="text"
-              placeholder="Search orders..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              className={`w-full pl-10 pr-4 py-2.5 md:py-2 rounded-lg focus:ring-2 ${themeClasses.input} text-sm md:text-base`}
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className={`rounded-lg px-3 py-2.5 md:py-2 focus:ring-2 ${themeClasses.input} text-sm md:text-base`}
-          >
-            <option value="all">All Status</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="PENDING">Pending</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Mobile Card View / Desktop Table View */}
-      <div className="md:hidden flex-1 min-h-0 overflow-y-auto">
-        {/* Mobile Card View */}
         <div
-          className={`${themeClasses.background} rounded-xl shadow-lg overflow-hidden flex-1 flex flex-col`}
+          className={`${themeClasses.background} ${themeClasses.border} rounded-xl md:rounded-2xl border p-2 md:p-3 flex flex-col lg:flex-row gap-2 md:gap-3`}
         >
-          <div
-            className={`p-4 ${themeClasses.headerBg} flex items-center justify-between`}
-          >
-            <span
-              className={`text-sm font-semibold ${themeClasses.text.secondary}`}
-            >
-              {paginatedOrders.length} transactions
-            </span>
+          <div className="w-full lg:flex-1 min-w-0">
+            <label className={`block text-xs mb-1 ${themeClasses.text.muted}`}>
+              Search
+            </label>
+            <div className="relative">
+              <FaSearch
+                className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs ${themeClasses.text.muted}`}
+              />
+              <input
+                type="text"
+                placeholder="Search order ID or payment method"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className={`w-full pl-8 pr-3 py-2 rounded-lg focus:ring-2 text-xs sm:text-sm ${themeClasses.input}`}
+              />
+            </div>
           </div>
-          <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
-            {paginatedOrders.map((order) => (
-              <div
-                key={order.id}
-                className={`p-4 border-b ${isDarkMode ? "border-gray-700" : "border-gray-100"} ${themeClasses.hover}`}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="flex items-center space-x-2 mb-1">
-                      <div
-                        className={`w-2 h-2 rounded-full ${order.status === "COMPLETED" ? "bg-emerald-500" : "bg-amber-500"}`}
-                      ></div>
-                      <span
-                        className={`font-semibold ${themeClasses.text.primary}`}
-                      >
-                        #{order.id}
-                      </span>
-                    </div>
-                    <p className={`text-xs ${themeClasses.text.muted}`}>
-                      {new Date(order.createdAt).toLocaleDateString()} •{" "}
-                      {new Date(order.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <div
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      order.status === "COMPLETED"
-                        ? isDarkMode
-                          ? "bg-emerald-900/30 text-emerald-300"
-                          : "bg-emerald-50 text-emerald-700"
-                        : isDarkMode
-                          ? "bg-amber-900/30 text-amber-300"
-                          : "bg-amber-50 text-amber-700"
+
+          <div className="w-full lg:w-56 xl:w-64">
+            <label className={`block text-xs mb-1 ${themeClasses.text.muted}`}>
+              Month
+            </label>
+            <select
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              className={`w-full rounded-lg px-3 py-2 focus:ring-2 text-xs sm:text-sm ${themeClasses.input}`}
+            >
+              {monthOptions.length === 0 ? (
+                <option value={monthFilter}>{monthFilter}</option>
+              ) : (
+                monthOptions.map((monthValue) => {
+                  const [y, m] = monthValue.split("-").map(Number);
+                  const label = new Date(y, m - 1, 1).toLocaleDateString(
+                    undefined,
+                    {
+                      year: "numeric",
+                      month: "long",
+                    },
+                  );
+                  return (
+                    <option key={monthValue} value={monthValue}>
+                      {label}
+                    </option>
+                  );
+                })
+              )}
+            </select>
+          </div>
+
+          <div className="w-full lg:flex-1 min-w-0">
+            <label className={`block text-xs mb-1 ${themeClasses.text.muted}`}>
+              Weeks
+            </label>
+            <div className="overflow-x-auto">
+              <div className="inline-flex gap-1.5 min-w-max pb-1">
+                {weekRanges.map((week, idx) => (
+                  <button
+                    key={`${week.label}-${idx}`}
+                    onClick={() => {
+                      setActiveWeekIndex(idx);
+                      setExpandedDayKey(null);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium whitespace-nowrap border transition-colors ${
+                      idx === safeWeekIndex
+                        ? "bg-emerald-500 text-white border-emerald-500"
+                        : `${themeClasses.text.secondary} ${isDarkMode ? "bg-gray-700 border-gray-600 hover:bg-gray-650" : "bg-gray-50 border-gray-200 hover:bg-gray-100"}`
                     }`}
                   >
-                    {order.status}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mt-3">
-                  <div>
-                    <p
-                      className={`text-xs ${themeClasses.text.secondary} mb-1`}
-                    >
-                      Payment
-                    </p>
-                    <p
-                      className={`font-medium ${themeClasses.text.primary} text-sm`}
-                    >
-                      {order.paymentMethod}
-                    </p>
-                  </div>
-                  <div>
-                    <p
-                      className={`text-xs ${themeClasses.text.secondary} mb-1`}
-                    >
-                      Items
-                    </p>
-                    <p
-                      className={`font-medium ${themeClasses.text.primary} text-sm`}
-                    >
-                      {order.orderItems?.length || 0}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-gray-700/30">
-                  <div className="flex justify-between items-center">
-                    <span className={`text-xs ${themeClasses.text.secondary}`}>
-                      Total Amount
-                    </span>
-                    <span className={`font-bold ${themeClasses.text.primary}`}>
-                      Ksh {order.totalAmount?.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {paginatedOrders.length === 0 && (
-            <div className="text-center py-12">
-              <div
-                className={`text-4xl mb-4 ${isDarkMode ? "text-gray-600" : "text-gray-400"}`}
-              >
-                📄
-              </div>
-              <h3
-                className={`text-lg font-medium ${themeClasses.text.primary} mb-2`}
-              >
-                No orders found
-              </h3>
-              <p className={themeClasses.text.secondary}>
-                Try adjusting your search or filter
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Desktop Table View */}
-      <div className="hidden md:flex flex-col flex-1 min-h-0">
-        <div
-          className={`${themeClasses.background} ${themeClasses.border} rounded-2xl shadow-lg overflow-hidden flex-1 flex flex-col`}
-        >
-          <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0">
-            <table className="w-full">
-              <thead className={`${themeClasses.headerBg} sticky top-0 z-10`}>
-                <tr>
-                  <th
-                    className={`text-left py-4 px-6 text-sm font-semibold ${themeClasses.text.secondary}`}
-                  >
-                    Order ID
-                  </th>
-                  <th
-                    className={`text-left py-4 px-6 text-sm font-semibold ${themeClasses.text.secondary}`}
-                  >
-                    Date & Time
-                  </th>
-                  <th
-                    className={`text-left py-4 px-6 text-sm font-semibold ${themeClasses.text.secondary}`}
-                  >
-                    Payment Method
-                  </th>
-                  <th
-                    className={`text-left py-4 px-6 text-sm font-semibold ${themeClasses.text.secondary}`}
-                  >
-                    Items
-                  </th>
-                  <th
-                    className={`text-left py-4 px-6 text-sm font-semibold ${themeClasses.text.secondary}`}
-                  >
-                    Total Amount
-                  </th>
-                  <th
-                    className={`text-left py-4 px-6 text-sm font-semibold ${themeClasses.text.secondary}`}
-                  >
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody
-                className={`divide-y ${isDarkMode ? "divide-gray-700" : "divide-gray-100"}`}
-              >
-                {paginatedOrders.map((order) => (
-                  <tr key={order.id} className={themeClasses.hover}>
-                    <td className="py-4 px-6">
-                      <div
-                        className={`font-semibold ${themeClasses.text.primary}`}
-                      >
-                        #{order.id}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className={themeClasses.text.primary}>
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </div>
-                      <div className={`text-sm ${themeClasses.text.muted}`}>
-                        {new Date(order.createdAt).toLocaleTimeString()}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                          isDarkMode
-                            ? "bg-blue-900/30 text-blue-300"
-                            : "bg-blue-50 text-blue-700"
-                        }`}
-                      >
-                        {order.paymentMethod}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div
-                        className={`font-medium ${themeClasses.text.primary}`}
-                      >
-                        {order.orderItems?.length || 0} items
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className={`font-bold ${themeClasses.text.primary}`}>
-                        Ksh {order.totalAmount?.toFixed(2)}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                          order.status === "COMPLETED"
-                            ? isDarkMode
-                              ? "bg-emerald-900/30 text-emerald-300"
-                              : "bg-emerald-50 text-emerald-700"
-                            : isDarkMode
-                              ? "bg-amber-900/30 text-amber-300"
-                              : "bg-amber-50 text-amber-700"
-                        }`}
-                      >
-                        {order.status}
-                      </div>
-                    </td>
-                  </tr>
+                    {week.label}
+                  </button>
                 ))}
-              </tbody>
-            </table>
-          </div>
-
-          {paginatedOrders.length === 0 && (
-            <div className="text-center py-12 flex-1 flex items-center justify-center">
-              <div>
-                <div
-                  className={`text-4xl mb-4 ${isDarkMode ? "text-gray-600" : "text-gray-400"}`}
-                >
-                  📄
-                </div>
-                <h3
-                  className={`text-lg font-medium ${themeClasses.text.primary} mb-2`}
-                >
-                  No orders found
-                </h3>
-                <p className={themeClasses.text.secondary}>
-                  Try adjusting your search or filter criteria
-                </p>
               </div>
             </div>
-          )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+          <div
+            className={`${themeClasses.background} ${themeClasses.border} border rounded-xl p-3 md:p-4`}
+          >
+            <p className={`text-[11px] sm:text-xs ${themeClasses.text.secondary}`}>
+              Week Total
+            </p>
+            <p className={`text-lg md:text-2xl font-bold text-emerald-500`}>
+              Ksh {weekTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+          <div
+            className={`${themeClasses.background} ${themeClasses.border} border rounded-xl p-3 md:p-4`}
+          >
+            <p className={`text-[11px] sm:text-xs ${themeClasses.text.secondary}`}>
+              Transactions
+            </p>
+            <p className={`text-lg md:text-2xl font-bold ${themeClasses.text.primary}`}>
+              {weekTransactions}
+            </p>
+          </div>
+          <div
+            className={`${themeClasses.background} ${themeClasses.border} border rounded-xl p-3 md:p-4`}
+          >
+            <p className={`text-[11px] sm:text-xs ${themeClasses.text.secondary}`}>
+              Avg per Order
+            </p>
+            <p className={`text-lg md:text-2xl font-bold ${themeClasses.text.primary}`}>
+              Ksh {weekAvg.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </p>
+          </div>
         </div>
       </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto pr-0.5">
+        <div className="space-y-2 md:space-y-3">
+          {dayBuckets.map((day) => {
+            const isExpanded = expandedDayKey === day.key;
+            return (
+              <div
+                key={day.key}
+                className={`${themeClasses.background} ${themeClasses.border} border rounded-xl md:rounded-2xl overflow-hidden`}
+              >
+                <button
+                  onClick={() =>
+                    setExpandedDayKey((prev) => (prev === day.key ? null : day.key))
+                  }
+                  className={`w-full p-3 md:p-4 flex items-center justify-between gap-2 ${themeClasses.hover}`}
+                >
+                  <div className="min-w-0 flex items-center gap-2 md:gap-3 text-left">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                    <div className="min-w-0">
+                      <p className={`font-semibold text-sm md:text-base ${themeClasses.text.primary}`}>
+                        {day.dayName}
+                      </p>
+                      <p className={`text-[11px] md:text-xs ${themeClasses.text.muted}`}>
+                        {day.dateLabel}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 md:gap-4 shrink-0">
+                    <span className={`text-[11px] md:text-xs ${themeClasses.text.secondary}`}>
+                      {day.count} txns
+                    </span>
+                    <span className="text-xs md:text-sm font-semibold text-emerald-500">
+                      Ksh {day.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                    {isExpanded ? (
+                      <FaChevronUp className={`text-xs ${themeClasses.text.secondary}`} />
+                    ) : (
+                      <FaChevronDown className={`text-xs ${themeClasses.text.secondary}`} />
+                    )}
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div
+                    className={`border-t ${isDarkMode ? "border-gray-700" : "border-gray-100"}`}
+                  >
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[720px]">
+                        <thead className={themeClasses.headerBg}>
+                          <tr>
+                            <th className={`text-left py-3 px-3 md:px-4 text-xs font-semibold ${themeClasses.text.secondary}`}>
+                              Order ID
+                            </th>
+                            <th className={`text-left py-3 px-3 md:px-4 text-xs font-semibold ${themeClasses.text.secondary}`}>
+                              Date & Time
+                            </th>
+                            <th className={`text-left py-3 px-3 md:px-4 text-xs font-semibold ${themeClasses.text.secondary}`}>
+                              Payment Method
+                            </th>
+                            <th className={`text-left py-3 px-3 md:px-4 text-xs font-semibold ${themeClasses.text.secondary}`}>
+                              Items
+                            </th>
+                            <th className={`text-left py-3 px-3 md:px-4 text-xs font-semibold ${themeClasses.text.secondary}`}>
+                              Total Amount
+                            </th>
+                            <th className={`text-left py-3 px-3 md:px-4 text-xs font-semibold ${themeClasses.text.secondary}`}>
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody
+                          className={`divide-y ${isDarkMode ? "divide-gray-700" : "divide-gray-100"}`}
+                        >
+                          {day.records.length > 0 ? (
+                            day.records.map((order) => (
+                              <tr key={order.id} className={themeClasses.hover}>
+                                <td className="py-3 px-3 md:px-4 text-xs md:text-sm">
+                                  <div className={`font-semibold ${themeClasses.text.primary}`}>
+                                    #{order.id}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-3 md:px-4 text-xs md:text-sm">
+                                  <div className={themeClasses.text.primary}>
+                                    {new Date(order.createdAt).toLocaleDateString()}
+                                  </div>
+                                  <div className={`text-[11px] ${themeClasses.text.muted}`}>
+                                    {new Date(order.createdAt).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-3 md:px-4 text-xs md:text-sm">
+                                  <span
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium ${
+                                      isDarkMode
+                                        ? "bg-blue-900/30 text-blue-300"
+                                        : "bg-blue-50 text-blue-700"
+                                    }`}
+                                  >
+                                    {order.paymentMethod}
+                                  </span>
+                                </td>
+                                <td className={`py-3 px-3 md:px-4 text-xs md:text-sm ${themeClasses.text.primary}`}>
+                                  {order.orderItems?.length || 0} items
+                                </td>
+                                <td className="py-3 px-3 md:px-4 text-xs md:text-sm font-semibold text-emerald-500">
+                                  Ksh {(Number(order.totalAmount) || 0).toFixed(2)}
+                                </td>
+                                <td className="py-3 px-3 md:px-4 text-xs md:text-sm">
+                                  <span
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium ${
+                                      order.status === "COMPLETED"
+                                        ? isDarkMode
+                                          ? "bg-emerald-900/30 text-emerald-300"
+                                          : "bg-emerald-50 text-emerald-700"
+                                        : isDarkMode
+                                          ? "bg-amber-900/30 text-amber-300"
+                                          : "bg-amber-50 text-amber-700"
+                                    }`}
+                                  >
+                                    {order.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td
+                                colSpan={6}
+                                className={`py-8 text-center text-xs md:text-sm ${themeClasses.text.secondary}`}
+                              >
+                                No transactions for this day on the current page.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div
+                      className={`px-3 md:px-4 py-2.5 flex items-center justify-between text-[11px] md:text-xs ${themeClasses.text.secondary} ${themeClasses.headerBg}`}
+                    >
+                      <span>{day.dateLabel}</span>
+                      <span className="font-semibold text-emerald-500">
+                        Ksh {day.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {filteredOrders.length === 0 && (
+          <div className="text-center py-10">
+            <div
+              className={`text-4xl mb-3 ${isDarkMode ? "text-gray-600" : "text-gray-400"}`}
+            >
+              📄
+            </div>
+            <h3 className={`text-base md:text-lg font-medium ${themeClasses.text.primary} mb-1`}>
+              No transactions found
+            </h3>
+            <p className={`${themeClasses.text.secondary} text-xs md:text-sm`}>
+              Try a different week, month, or search term
+            </p>
+          </div>
+        )}
+      </div>
+
       {totalPages > 1 && (
         <div
           className={`flex-shrink-0 flex items-center justify-between px-4 py-3 mt-4 rounded-xl ${themeClasses.background} border ${themeClasses.border}`}
