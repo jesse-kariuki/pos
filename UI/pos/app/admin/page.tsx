@@ -858,6 +858,12 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
     hover: isDarkMode ? "hover:bg-gray-750" : "hover:bg-gray-50",
   };
 
+  useEffect(() => {
+    setActiveWeekIndex(0);
+    setExpandedDayKey(null);
+    setCurrentPage(1);
+  }, [monthFilter]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -871,12 +877,6 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
       </div>
     );
   }
-
-  useEffect(() => {
-    setActiveWeekIndex(0);
-    setExpandedDayKey(null);
-    setCurrentPage(1);
-  }, [monthFilter]);
 
   return (
     <section className="h-full flex flex-col overflow-hidden">
