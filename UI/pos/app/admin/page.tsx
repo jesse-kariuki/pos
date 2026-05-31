@@ -673,6 +673,8 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
   const [activeWeekIndex, setActiveWeekIndex] = useState(0);
   const [expandedDayKey, setExpandedDayKey] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [hasInitializedDateFilters, setHasInitializedDateFilters] =
+    useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -705,6 +707,12 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
 
     return matchesSearch && matchesStatus;
   });
+
+  const parseOrderDate = (value: unknown) => {
+    if (!value) return null;
+    const date = new Date(value as string | number | Date);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
 
   const getMonthRange = (monthValue: string) => {
     const [year, month] = monthValue.split("-").map(Number);
@@ -763,12 +771,14 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
   };
 
   const monthFilteredOrders = searchAndStatusFiltered.filter((order) => {
-    const createdAt = new Date(order.createdAt);
+    const createdAt = parseOrderDate(order?.createdAt);
+    if (!createdAt) return false;
     return createdAt >= monthStart && createdAt <= monthEnd;
   });
 
   const filteredOrders = monthFilteredOrders.filter((order) => {
-    const createdAt = new Date(order.createdAt);
+    const createdAt = parseOrderDate(order?.createdAt);
+    if (!createdAt) return false;
     return createdAt >= selectedWeek.start && createdAt <= selectedWeek.end;
   });
 
@@ -803,12 +813,19 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
     const nextDay = new Date(dayDate);
     nextDay.setDate(nextDay.getDate() + 1);
 
-    const records = paginatedOrders.filter((order) => {
-      const createdAt = new Date(order.createdAt);
+    const recordsAll = filteredOrders.filter((order) => {
+      const createdAt = parseOrderDate(order?.createdAt);
+      if (!createdAt) return false;
       return createdAt >= dayDate && createdAt < nextDay;
     });
 
-    const total = records.reduce(
+    const records = paginatedOrders.filter((order) => {
+      const createdAt = parseOrderDate(order?.createdAt);
+      if (!createdAt) return false;
+      return createdAt >= dayDate && createdAt < nextDay;
+    });
+
+    const total = recordsAll.reduce(
       (sum, order) => sum + (Number(order.totalAmount) || 0),
       0,
     );
@@ -821,7 +838,7 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
         month: "short",
         day: "numeric",
       }),
-      count: records.length,
+      count: recordsAll.length,
       total,
       records,
     };
@@ -836,10 +853,13 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
 
   const monthOptions = Array.from(
     new Set(
-      orders.map((order) => {
-        const createdAt = new Date(order.createdAt);
-        return `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}`;
-      }),
+      orders
+        .map((order) => parseOrderDate(order?.createdAt))
+        .filter((date): date is Date => Boolean(date))
+        .map(
+          (createdAt) =>
+            `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}`,
+        ),
     ),
   ).sort((a, b) => (a > b ? -1 : 1));
 
@@ -863,6 +883,40 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
     setExpandedDayKey(null);
     setCurrentPage(1);
   }, [monthFilter]);
+
+  useEffect(() => {
+    if (hasInitializedDateFilters || orders.length === 0) return;
+
+    const sortedByNewest = [...orders]
+      .map((order) => ({
+        order,
+        createdAt: parseOrderDate(order?.createdAt),
+      }))
+      .filter((item): item is { order: any; createdAt: Date } =>
+        Boolean(item.createdAt),
+      )
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    if (sortedByNewest.length === 0) {
+      setHasInitializedDateFilters(true);
+      return;
+    }
+
+    const latestOrderDate = sortedByNewest[0].createdAt;
+    const targetMonth = `${latestOrderDate.getFullYear()}-${String(latestOrderDate.getMonth() + 1).padStart(2, "0")}`;
+    const weeks = getWeekRangesForMonth(
+      latestOrderDate.getFullYear(),
+      latestOrderDate.getMonth(),
+    );
+
+    const weekIdx = weeks.findIndex(
+      (week) => latestOrderDate >= week.start && latestOrderDate <= week.end,
+    );
+
+    setMonthFilter(targetMonth);
+    setActiveWeekIndex(weekIdx >= 0 ? weekIdx : 0);
+    setHasInitializedDateFilters(true);
+  }, [orders, hasInitializedDateFilters]);
 
   if (loading) {
     return (
@@ -1038,7 +1092,7 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
 
                   <div className="flex items-center gap-2 md:gap-4 shrink-0">
                     <span className={`text-[11px] md:text-xs ${themeClasses.text.secondary}`}>
-                      {day.count} txns
+                      {day.count} transactions
                     </span>
                     <span className="text-xs md:text-sm font-semibold text-emerald-500">
                       Ksh {day.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
