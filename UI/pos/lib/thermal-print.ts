@@ -100,50 +100,49 @@ export function buildThermalReceiptText(
   paperWidth: PaperWidth,
 ): string {
   const width = paperWidth === "80mm" ? 48 : 32;
-  const itemNameWidth = paperWidth === "80mm" ? 28 : 16;
-  const qtyWidth = paperWidth === "80mm" ? 8 : 6;
-  const totalWidth = width - itemNameWidth - qtyWidth;
+
+  const centerLine = (value: string) => {
+    const text = safeText(value, width);
+    const leftPad = Math.max(0, Math.floor((width - text.length) / 2));
+    return `${" ".repeat(leftPad)}${text}`;
+  };
 
   const output: string[] = [];
 
   output.push("\x1B\x40");
   output.push("\x1B\x61\x01");
-  output.push(safeText(payload.storeName, width));
-  if (payload.tagline) output.push(safeText(payload.tagline, width));
-  if (payload.address) output.push(safeText(payload.address, width));
-  output.push(payload.createdAt);
-  output.push(`Receipt #: ${payload.receiptNumber}`);
-  output.push("\x1B\x61\x00");
+  output.push(centerLine(payload.storeName));
+  if (payload.tagline) output.push(centerLine(payload.tagline));
+  if (payload.address) output.push(centerLine(payload.address));
+  output.push(centerLine(payload.createdAt));
+  output.push(centerLine(`Receipt #: ${payload.receiptNumber}`));
 
-  output.push(line(width));
-  output.push(
-    `${padRight("ITEM", itemNameWidth)}${padRight("QTY", qtyWidth)}${padLeft("TOTAL", totalWidth)}`,
-  );
-  output.push(line(width));
+  output.push(centerLine(line(Math.min(width, 24))));
+  output.push(centerLine("ITEMS"));
+  output.push(centerLine(line(Math.min(width, 24))));
 
   payload.items.forEach((item) => {
     const qtyText = `${item.qty}${item.unitLabel || ""}`;
-    output.push(
-      `${padRight(safeText(item.name, itemNameWidth), itemNameWidth)}${padRight(qtyText, qtyWidth)}${padLeft(item.lineTotal.toFixed(2), totalWidth)}`,
-    );
+    output.push(centerLine(safeText(item.name, width)));
+    output.push(centerLine(`${qtyText} x ${item.unitPrice.toFixed(2)} = ${item.lineTotal.toFixed(2)}`));
   });
 
-  output.push(line(width));
-  output.push(`${padRight("Subtotal", width - 12)}${padLeft(payload.subtotal.toFixed(2), 12)}`);
-  output.push(`${padRight("Amount Paid", width - 12)}${padLeft(payload.amountPaid.toFixed(2), 12)}`);
+  output.push(centerLine(line(Math.min(width, 24))));
+  output.push(centerLine(`Subtotal: ${payload.subtotal.toFixed(2)}`));
+  output.push(centerLine(`Amount Paid: ${payload.amountPaid.toFixed(2)}`));
 
   if (payload.changeAmount > 0) {
-    output.push(`${padRight("Change", width - 12)}${padLeft(payload.changeAmount.toFixed(2), 12)}`);
+    output.push(centerLine(`Change: ${payload.changeAmount.toFixed(2)}`));
   }
 
-  output.push(line(width));
-  output.push(`${padRight("GRAND TOTAL", width - 12)}${padLeft(payload.total.toFixed(2), 12)}`);
-  output.push(line(width));
-  output.push(`Payment: ${payload.paymentMethod.toUpperCase()}`);
-  if (payload.phone) output.push(`Phone: ${payload.phone}`);
-  output.push(`Items: ${payload.items.length}`);
-  output.push(`Cashier: ${payload.cashierName}`);
-  output.push("Thank you for your patronage");
+  output.push(centerLine(line(Math.min(width, 24))));
+  output.push(centerLine(`GRAND TOTAL: ${payload.total.toFixed(2)}`));
+  output.push(centerLine(line(Math.min(width, 24))));
+  output.push(centerLine(`Payment: ${payload.paymentMethod.toUpperCase()}`));
+  if (payload.phone) output.push(centerLine(`Phone: ${payload.phone}`));
+  output.push(centerLine(`Items: ${payload.items.length}`));
+  output.push(centerLine(`Cashier: ${payload.cashierName}`));
+  output.push(centerLine("Thank you for your patronage"));
   output.push("\n\n\n");
   output.push("\x1D\x56\x00");
 
@@ -191,9 +190,9 @@ export function buildBrowserReceiptHtml(payload: ReceiptPayload): string {
     .map(
       (item) => `
         <tr>
-          <td style="font-size: 10px;">${safeText(item.name, 24)}</td>
+          <td style="font-size: 10px; text-align: center;">${safeText(item.name, 24)}</td>
           <td style="font-size: 10px; text-align: center;">${item.qty}${item.unitLabel || ""}</td>
-          <td style="font-size: 10px; text-align: right;">${item.lineTotal.toFixed(2)}</td>
+          <td style="font-size: 10px; text-align: center;">${item.lineTotal.toFixed(2)}</td>
         </tr>
       `,
     )
@@ -212,13 +211,14 @@ export function buildBrowserReceiptHtml(payload: ReceiptPayload): string {
             font-size: 10px;
             color: #000;
             line-height: 1.2;
+            text-align: center;
           }
           .center { text-align: center; }
           .bold { font-weight: bold; }
           .divider { border-top: 1px dashed #000; margin: 5px 0; }
           table { width: 100%; border-collapse: collapse; }
-          th { padding: 3px 0; border-bottom: 1px solid #000; }
-          td { padding: 2px 0; }
+          th { padding: 3px 0; border-bottom: 1px solid #000; text-align: center; }
+          td { padding: 2px 0; text-align: center; }
         </style>
       </head>
       <body>
@@ -233,9 +233,9 @@ export function buildBrowserReceiptHtml(payload: ReceiptPayload): string {
         <table>
           <thead>
             <tr class="bold">
-              <th style="text-align: left; width: 50%;">ITEM</th>
-              <th style="text-align: center; width: 25%;">QTY</th>
-              <th style="text-align: right; width: 25%;">TOTAL</th>
+              <th style="width: 50%;">ITEM</th>
+              <th style="width: 25%;">QTY</th>
+              <th style="width: 25%;">TOTAL</th>
             </tr>
           </thead>
           <tbody>
@@ -245,30 +245,20 @@ export function buildBrowserReceiptHtml(payload: ReceiptPayload): string {
 
         <div class="divider"></div>
 
-        <div style="display: flex; justify-content: space-between; font-size: 10px;">
-          <span class="bold">Subtotal:</span>
-          <span>${money(payload.subtotal)}</span>
-        </div>
+        <div style="font-size: 10px;"><span class="bold">Subtotal:</span> ${money(payload.subtotal)}</div>
 
-        <div style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 3px;">
-          <span class="bold">Amount Paid:</span>
-          <span>${money(payload.amountPaid)}</span>
-        </div>
+        <div style="font-size: 10px; margin-top: 3px;"><span class="bold">Amount Paid:</span> ${money(payload.amountPaid)}</div>
 
         ${
           payload.changeAmount > 0
-            ? `<div style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 3px; color: #d00;">
-                <span class="bold">Change:</span>
-                <span>${money(payload.changeAmount)}</span>
-              </div>`
+            ? `<div style="font-size: 10px; margin-top: 3px; color: #d00;"><span class="bold">Change:</span> ${money(payload.changeAmount)}</div>`
             : ""
         }
 
         <div class="divider"></div>
 
-        <div style="display: flex; justify-content: space-between; font-size: 12px;" class="bold">
-          <span>GRAND TOTAL</span>
-          <span>${money(payload.total)}</span>
+        <div style="font-size: 12px;" class="bold">
+          GRAND TOTAL ${money(payload.total)}
         </div>
 
         <div class="divider"></div>

@@ -16,7 +16,6 @@ import {
   buildBrowserReceiptHtml,
   buildThermalReceiptText,
   loadThermalPrinterSettings,
-  saveThermalPrinterSettings,
   sendRawPrintJob,
 } from "@/lib/thermal-print";
 import {
@@ -53,8 +52,9 @@ export default function CashierDashboard() {
   const [success, setSuccess] = useState("");
   const [showProducts, setShowProducts] = useState(false);
   const [showPaymentSection, setShowPaymentSection] = useState(true);
-  const [printerSettings, setPrinterSettings] =
-    useState<ThermalPrinterSettings>(DEFAULT_THERMAL_PRINTER_SETTINGS);
+  const [printerSettings] = useState<ThermalPrinterSettings>(() =>
+    loadThermalPrinterSettings() || DEFAULT_THERMAL_PRINTER_SETTINGS,
+  );
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -82,14 +82,6 @@ export default function CashierDashboard() {
 
     loadInventory();
   }, []);
-
-  useEffect(() => {
-    setPrinterSettings(loadThermalPrinterSettings());
-  }, []);
-
-  useEffect(() => {
-    saveThermalPrinterSettings(printerSettings);
-  }, [printerSettings]);
 
   const loadInventory = async () => {
     try {
@@ -302,43 +294,6 @@ export default function CashierDashboard() {
     }
   };
 
-  const testThermalPrint = async () => {
-    const samplePayload: ReceiptPayload = {
-      storeName: "ESIT GROCERIES",
-      tagline: "Thermal Printer Test",
-      address: "Nairobi, Kenya",
-      createdAt: new Date().toLocaleString(),
-      receiptNumber: `TEST-${Date.now().toString().slice(-6)}`,
-      paymentMethod: "test",
-      cashierName: getCashierName(),
-      items: [
-        {
-          name: "Printer Test Item A",
-          qty: 1,
-          unitPrice: 1,
-          lineTotal: 1,
-        },
-        {
-          name: "Printer Test Item B",
-          qty: 2,
-          unitPrice: 1.5,
-          lineTotal: 3,
-        },
-      ],
-      subtotal: 4,
-      amountPaid: 5,
-      changeAmount: 1,
-      total: 4,
-    };
-
-    try {
-      await printReceipt(samplePayload);
-      setSuccess("Test receipt sent.");
-      setTimeout(() => setSuccess(""), 3000);
-    } catch {
-      // printReceipt already sets a user-facing error.
-    }
-  };
 
   const completePayment = async () => {
     if (cart.length === 0) {
@@ -882,100 +837,6 @@ export default function CashierDashboard() {
                       )}
                     </div>
                   )}
-                </div>
-
-                {/* Receipt Printer Settings */}
-                <div className="p-4 rounded-xl border border-gray-700 bg-gray-900/40 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold text-gray-300">
-                      Receipt Printing
-                    </label>
-                    <div className="text-xs text-gray-400">
-                      Saved on this machine
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() =>
-                        setPrinterSettings((prev) => ({ ...prev, mode: "browser" }))
-                      }
-                      className={`py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                        printerSettings.mode === "browser"
-                          ? "bg-emerald-700 border-emerald-500 text-white"
-                          : "bg-gray-800 border-gray-700 text-gray-300 hover:border-emerald-500/40"
-                      }`}
-                    >
-                      Browser
-                    </button>
-                    <button
-                      onClick={() =>
-                        setPrinterSettings((prev) => ({ ...prev, mode: "thermal" }))
-                      }
-                      className={`py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                        printerSettings.mode === "thermal"
-                          ? "bg-emerald-700 border-emerald-500 text-white"
-                          : "bg-gray-800 border-gray-700 text-gray-300 hover:border-emerald-500/40"
-                      }`}
-                    >
-                      Thermal
-                    </button>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Printer Name</label>
-                    <input
-                      type="text"
-                      value={printerSettings.printerName}
-                      onChange={(e) =>
-                        setPrinterSettings((prev) => ({
-                          ...prev,
-                          printerName: e.target.value,
-                        }))
-                      }
-                      placeholder="E-POS"
-                      className="w-full px-3 py-2 bg-gray-900/70 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Paper Width</label>
-                    <select
-                      value={printerSettings.paperWidth}
-                      onChange={(e) =>
-                        setPrinterSettings((prev) => ({
-                          ...prev,
-                          paperWidth: e.target.value as "58mm" | "80mm",
-                        }))
-                      }
-                      className="w-full px-3 py-2 bg-gray-900/70 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
-                    >
-                      <option value="58mm">58mm</option>
-                      <option value="80mm">80mm</option>
-                    </select>
-                  </div>
-
-                  <label className="flex items-center gap-2 text-sm text-gray-300">
-                    <input
-                      type="checkbox"
-                      checked={printerSettings.fallbackToBrowser}
-                      onChange={(e) =>
-                        setPrinterSettings((prev) => ({
-                          ...prev,
-                          fallbackToBrowser: e.target.checked,
-                        }))
-                      }
-                      className="accent-emerald-500"
-                    />
-                    <span>Fallback to browser if thermal fails</span>
-                  </label>
-
-                  <button
-                    onClick={testThermalPrint}
-                    className="w-full py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-sm font-semibold text-white hover:border-emerald-500/60 hover:bg-gray-700 transition-colors"
-                  >
-                    Test Thermal Print
-                  </button>
                 </div>
 
                 {/* Dial Pad - Enhanced */}
