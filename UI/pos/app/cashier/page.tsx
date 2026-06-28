@@ -678,6 +678,39 @@ export default function CashierDashboard() {
                 </div>
               )}
             </div>
+
+            <div className="mt-4">
+              <div className="mb-3 px-1">
+                <h3 className="text-sm md:text-base font-semibold text-gray-100">Operations</h3>
+                <p className="text-xs text-gray-400">Manual sales and stock intake</p>
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
+                <div className="h-full">
+                  <ManualSalesEntry
+                    isDarkMode={true}
+                    compact={true}
+                    className="h-full"
+                    onSaved={async () => {
+                      await loadInventory();
+                      setSuccess("Manual sale recorded and synced.");
+                      setTimeout(() => setSuccess(""), 3000);
+                    }}
+                  />
+                </div>
+
+                <div className="h-full">
+                  <CashierStockEntry
+                    className="h-full"
+                    onSaved={async () => {
+                      await loadInventory();
+                      setSuccess("New stock saved and synced with Admin purchases/reports.");
+                      setTimeout(() => setSuccess(""), 3500);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Right Panel - Payment - Enhanced */}
@@ -875,28 +908,6 @@ export default function CashierDashboard() {
                       Enter
                     </button>
                   </div>
-                </div>
-
-                <div>
-                  <ManualSalesEntry
-                    isDarkMode={true}
-                    compact={true}
-                    onSaved={async () => {
-                      await loadInventory();
-                      setSuccess("Manual sale recorded and synced.");
-                      setTimeout(() => setSuccess(""), 3000);
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <CashierStockEntry
-                    onSaved={async () => {
-                      await loadInventory();
-                      setSuccess("New stock saved and synced with Admin purchases/reports.");
-                      setTimeout(() => setSuccess(""), 3500);
-                    }}
-                  />
                 </div>
 
                 {/* Complete Payment Button - Enhanced */}

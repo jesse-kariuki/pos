@@ -24,10 +24,12 @@ export default function ManualSalesEntry({
   isDarkMode,
   onSaved,
   compact = false,
+  className = "",
 }: {
   isDarkMode: boolean;
   onSaved?: () => Promise<void> | void;
   compact?: boolean;
+  className?: string;
 }) {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -128,7 +130,7 @@ export default function ManualSalesEntry({
   };
 
   return (
-    <div className={`${theme.card} border rounded-xl ${compact ? "p-3" : "p-4 md:p-5"} space-y-3`}>
+    <div className={`${theme.card} border rounded-xl ${compact ? "p-3" : "p-4 md:p-5"} space-y-3 ${className}`}>
       <div className="flex items-center justify-between gap-3">
         <h3 className={`font-semibold ${theme.text.primary} ${compact ? "text-sm" : "text-base md:text-lg"}`}>
           Record Offline/Missed Sale

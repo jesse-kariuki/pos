@@ -17,8 +17,10 @@ function toLocalDateTimeString(input: string) {
 
 export default function CashierStockEntry({
   onSaved,
+  className = "",
 }: {
   onSaved?: () => Promise<void> | void;
+  className?: string;
 }) {
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -88,7 +90,7 @@ export default function CashierStockEntry({
   };
 
   return (
-    <section className="border border-cyan-700/50 rounded-xl p-4 bg-gradient-to-br from-slate-900/90 via-cyan-950/60 to-slate-900/90 space-y-3">
+    <section className={`border border-cyan-700/50 rounded-xl p-4 bg-gradient-to-br from-slate-900/90 via-cyan-950/60 to-slate-900/90 space-y-3 ${className}`}>
       <div className="flex items-center gap-2 text-cyan-300">
         <FaWarehouse />
         <h3 className="font-semibold text-sm md:text-base">Cashier Stock Intake</h3>
