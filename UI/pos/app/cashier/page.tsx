@@ -193,6 +193,7 @@ export default function CashierDashboard() {
         return [...prev, { ...product, qty: 1 }];
       }
     });
+    setShowProducts(false);
     setSuccess(`Added ${product.name} to cart`);
     setTimeout(() => setSuccess(""), 2000);
   }
