@@ -148,6 +148,7 @@ export default function ManualSalesEntry({
             type="datetime-local"
             value={saleDateTime}
             onChange={(e) => setSaleDateTime(e.target.value)}
+            style={{ colorScheme: isDarkMode ? "dark" : "light" }}
             className={`w-full rounded-lg border px-3 py-2 text-sm ${theme.input}`}
           />
         </div>

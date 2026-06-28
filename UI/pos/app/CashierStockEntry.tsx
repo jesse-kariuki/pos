@@ -124,6 +124,7 @@ export default function CashierStockEntry({
             type="datetime-local"
             value={stockDateTime}
             onChange={(e) => setStockDateTime(e.target.value)}
+            style={{ colorScheme: "dark" }}
             className="w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-white"
           />
         </div>
