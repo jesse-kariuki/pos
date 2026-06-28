@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { inventoryAPI, orderAPI, productAPI } from "@/lib/api-service";
 import { useRouter } from "next/navigation";
 import { PurchasesSection, ReportsSection } from "@/app/PurchasesAndReportsSection"
+import ManualSalesEntry from "@/app/ManualSalesEntry";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -689,19 +690,20 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
   const [hasInitializedDateFilters, setHasInitializedDateFilters] =
     useState(false);
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const data = await orderAPI.getAll();
-        setOrders(data);
-      } catch (err) {
-        console.error("Order fetch failed", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchOrders();
+  const fetchOrders = useCallback(async () => {
+    try {
+      const data = await orderAPI.getAll();
+      setOrders(data);
+    } catch (err) {
+      console.error("Order fetch failed", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const searchAndStatusFiltered = orders.filter((order) => {
     const orderIdText = order?.id != null ? String(order.id) : "";
@@ -966,6 +968,8 @@ function OrdersSection({ isDarkMode }: { isDarkMode: boolean }) {
         <p className={`${themeClasses.text.secondary} text-sm md:text-base`}>
           Week and day transaction breakdown
         </p>
+
+        <ManualSalesEntry isDarkMode={isDarkMode} onSaved={fetchOrders} />
 
         <div
           className={`${themeClasses.background} ${themeClasses.border} rounded-xl md:rounded-2xl border p-2 md:p-3 flex flex-col lg:flex-row gap-2 md:gap-3`}

@@ -8,6 +8,7 @@ import {
   type CartItemDto,
   type Product,
 } from "@/lib/api-service";
+import ManualSalesEntry from "@/app/ManualSalesEntry";
 import { useEffect, useRef, useState } from "react";
 import {
   DEFAULT_THERMAL_PRINTER_SETTINGS,
@@ -874,6 +875,16 @@ export default function CashierDashboard() {
                     </button>
                   </div>
                 </div>
+
+                <ManualSalesEntry
+                  isDarkMode={true}
+                  compact={true}
+                  onSaved={async () => {
+                    await loadInventory();
+                    setSuccess("Manual sale recorded and synced.");
+                    setTimeout(() => setSuccess(""), 3000);
+                  }}
+                />
 
                 {/* Complete Payment Button - Enhanced */}
                 <div className="pt-4">

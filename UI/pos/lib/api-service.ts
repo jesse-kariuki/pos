@@ -266,6 +266,7 @@ export const orderAPI = {
   create: async (orderData: {
   orderItems: Array<{ productId: number; quantity: number }>;
   paymentMethod: string;
+  saleDateTime?: string;
   phoneNumber?: string;
   amountPaid?: number;
 }) => {

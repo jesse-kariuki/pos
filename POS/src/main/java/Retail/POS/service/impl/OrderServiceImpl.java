@@ -79,7 +79,7 @@ public class OrderServiceImpl implements OrderService {
                 .orderItems(orderItems)
                 .totalAmount(total)
                 .status(OrderStatus.COMPLETED) // Set to COMPLETED for POS
-                .createdAt(LocalDateTime.now()) // Ensure timestamp is set
+                .createdAt(request.getSaleDateTime() != null ? request.getSaleDateTime() : LocalDateTime.now())
                 .paymentMethod(request.getPaymentMethod()) // Don't forget to save the method!
                 .build();
 
