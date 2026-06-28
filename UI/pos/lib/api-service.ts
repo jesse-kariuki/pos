@@ -453,6 +453,7 @@ export const purchaseAPI = {
     unit: string;
     totalCost: number;
     notes?: string;
+    purchaseDateTime?: string;
   }) => {
     const response = await fetch(`${API_BASE_URL}/api/purchases`, {
       method: 'POST',

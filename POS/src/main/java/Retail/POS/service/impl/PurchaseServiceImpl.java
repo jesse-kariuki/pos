@@ -43,6 +43,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             .unit(request.getUnit())
             .totalCost(request.getTotalCost())
             .notes(request.getNotes())
+            .createdAt(request.getPurchaseDateTime())
             .build();
 
         purchaseRepository.save(purchase);

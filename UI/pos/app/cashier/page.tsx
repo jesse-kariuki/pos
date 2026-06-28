@@ -3,12 +3,14 @@
 import {
   inventoryAPI,
   orderAPI,
+  purchaseAPI,
   productAPI,
   scanAPI,
   type CartItemDto,
   type Product,
 } from "@/lib/api-service";
 import ManualSalesEntry from "@/app/ManualSalesEntry";
+import CashierStockEntry from "@/app/CashierStockEntry";
 import { useEffect, useRef, useState } from "react";
 import {
   DEFAULT_THERMAL_PRINTER_SETTINGS,
@@ -27,6 +29,7 @@ import {
   FaPhone,
   FaPlus,
   FaReceipt,
+  FaStore,
   FaShoppingCart,
   FaTimes,
   FaTrash,
@@ -53,10 +56,16 @@ export default function CashierDashboard() {
   const [success, setSuccess] = useState("");
   const [showProducts, setShowProducts] = useState(false);
   const [showPaymentSection, setShowPaymentSection] = useState(true);
+  const [quickStats, setQuickStats] = useState({
+    monthPurchaseSpend: 0,
+  });
   const [printerSettings] = useState<ThermalPrinterSettings>(() =>
     loadThermalPrinterSettings() || DEFAULT_THERMAL_PRINTER_SETTINGS,
   );
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const scannerSectionRef = useRef<HTMLDivElement>(null);
+  const manualSalesRef = useRef<HTMLDivElement>(null);
+  const stockEntryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
@@ -82,6 +91,7 @@ export default function CashierDashboard() {
     }
 
     loadInventory();
+    loadQuickStats();
   }, []);
 
   const loadInventory = async () => {
@@ -97,6 +107,33 @@ export default function CashierDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadQuickStats = async () => {
+    try {
+      const now = new Date();
+      const monthPurchases = await purchaseAPI.getByMonth(
+        now.getFullYear(),
+        now.getMonth() + 1,
+      );
+      const spend = monthPurchases.reduce(
+        (sum: number, purchase: any) => sum + (Number(purchase.totalCost) || 0),
+        0,
+      );
+      setQuickStats({ monthPurchaseSpend: spend });
+    } catch {
+      setQuickStats({ monthPurchaseSpend: 0 });
+    }
+  };
+
+  const jumpToSection = (target: "scanner" | "manual" | "stock") => {
+    setShowPaymentSection(true);
+    const map = {
+      scanner: scannerSectionRef,
+      manual: manualSalesRef,
+      stock: stockEntryRef,
+    };
+    map[target].current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleSearch = async (keyword: string) => {
@@ -430,7 +467,34 @@ export default function CashierDashboard() {
       </header>
 
       {/* Main Content - Fills Remaining Height */}
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-80px)]">
+      <div className="h-[calc(100vh-80px)] flex flex-col">
+        <div className="px-4 lg:px-6 py-3 bg-gradient-to-r from-gray-900 via-emerald-950/30 to-cyan-950/20 border-b border-gray-800">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <button
+              onClick={() => jumpToSection("scanner")}
+              className="text-left rounded-xl border border-emerald-800/50 bg-emerald-950/25 px-4 py-3 hover:border-emerald-600 transition-colors"
+            >
+              <p className="text-xs text-emerald-200/80">Section</p>
+              <p className="text-sm font-semibold text-white mt-1">Barcode & Checkout</p>
+            </button>
+            <button
+              onClick={() => jumpToSection("manual")}
+              className="text-left rounded-xl border border-amber-800/50 bg-amber-950/20 px-4 py-3 hover:border-amber-600 transition-colors"
+            >
+              <p className="text-xs text-amber-200/80">Section</p>
+              <p className="text-sm font-semibold text-white mt-1">Manual Offline Sale</p>
+            </button>
+            <button
+              onClick={() => jumpToSection("stock")}
+              className="text-left rounded-xl border border-cyan-800/50 bg-cyan-950/20 px-4 py-3 hover:border-cyan-600 transition-colors"
+            >
+              <p className="text-xs text-cyan-200/80">Section</p>
+              <p className="text-sm font-semibold text-white mt-1">New Stock Intake</p>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 flex flex-col lg:flex-row">
         {/* Left Panel - Products & Cart */}
         <div className="flex-1 flex flex-col lg:flex-row p-4 lg:p-6 space-y-4 lg:space-y-0 lg:space-x-6">
           {/* Products Panel */}
@@ -709,8 +773,32 @@ export default function CashierDashboard() {
 
               {/* Payment Content - SCROLLABLE */}
               <div className="p-6 space-y-6 overflow-y-auto flex-1">
+                <div className="rounded-xl border border-emerald-700/40 bg-gradient-to-r from-emerald-900/40 to-slate-900/60 p-3">
+                  <p className="text-xs text-emerald-200/80">Quick Access</p>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => jumpToSection("scanner")}
+                      className="rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-2 text-[11px] text-white"
+                    >
+                      Scan
+                    </button>
+                    <button
+                      onClick={() => jumpToSection("manual")}
+                      className="rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-2 text-[11px] text-white"
+                    >
+                      Manual Sale
+                    </button>
+                    <button
+                      onClick={() => jumpToSection("stock")}
+                      className="rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-2 text-[11px] text-white"
+                    >
+                      New Stock
+                    </button>
+                  </div>
+                </div>
+
                 {/* Barcode Scanner - Enhanced */}
-                <div>
+                <div ref={scannerSectionRef}>
                   <label className="block text-sm font-semibold text-gray-300 mb-2 flex items-center space-x-2">
                     <FaBarcode className="h-4 w-4 text-emerald-400" />
                     <span>Barcode Scanner</span>
@@ -876,15 +964,38 @@ export default function CashierDashboard() {
                   </div>
                 </div>
 
-                <ManualSalesEntry
-                  isDarkMode={true}
-                  compact={true}
-                  onSaved={async () => {
-                    await loadInventory();
-                    setSuccess("Manual sale recorded and synced.");
-                    setTimeout(() => setSuccess(""), 3000);
-                  }}
-                />
+                <div ref={manualSalesRef}>
+                  <ManualSalesEntry
+                    isDarkMode={true}
+                    compact={true}
+                    onSaved={async () => {
+                      await loadInventory();
+                      await loadQuickStats();
+                      setSuccess("Manual sale recorded and synced.");
+                      setTimeout(() => setSuccess(""), 3000);
+                    }}
+                  />
+                </div>
+
+                <div ref={stockEntryRef}>
+                  <CashierStockEntry
+                    onSaved={async () => {
+                      await loadInventory();
+                      await loadQuickStats();
+                      setSuccess("New stock saved and synced with Admin purchases/reports.");
+                      setTimeout(() => setSuccess(""), 3500);
+                    }}
+                  />
+                  <div className="mt-2 rounded-lg border border-cyan-800/40 bg-cyan-950/20 px-3 py-2 text-xs text-cyan-200/85 flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1">
+                      <FaStore className="text-cyan-300" />
+                      Cashier month stock spend
+                    </span>
+                    <span className="font-semibold text-cyan-100">
+                      Ksh {quickStats.monthPurchaseSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
 
                 {/* Complete Payment Button - Enhanced */}
                 <div className="pt-4">
@@ -921,6 +1032,7 @@ export default function CashierDashboard() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
 
